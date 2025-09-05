@@ -56,14 +56,9 @@ const STATIC_FILES = [
   '/History.js',
   '/logout.js',
   '/table.js',
-  '/favicon.svg',
-  '/favicon.ico',
-  '/favicon-16x16.png',
-  '/favicon-32x32.png',
-  '/icon-192.svg',
-  '/icon-512.svg',
-  '/logo.svg',
-  '/logo-small.svg',
+  '/sellbit-logo-icon.svg',
+  '/sellbit-logo-main.jpg',
+  '/manifest.json',
   '/manifest.json',
   '/offline.html'
 ];

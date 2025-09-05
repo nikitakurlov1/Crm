@@ -510,11 +510,7 @@ function showToast(title, message, type = 'info') {
 }
 
 function goBack() {
-    if (document.referrer && document.referrer.includes('home.html')) {
-        window.history.back();
-    } else {
-        window.location.href = 'home.html';
-    }
+    window.location.href = 'home.html';
 }
 
 function formatCurrency(amount) {

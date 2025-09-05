@@ -85,7 +85,7 @@ class HistoryPage {
             this.transactions.push({
                 id: `stake_active_${stake.id}`,
                 type: 'stake',
-                title: `Ставка ${stake.coinName}`,
+                title: `Сделка ${stake.coinName}`,
                 amount: stake.amount,
                 currency: 'USD',
                 date: stake.startTime,
@@ -103,7 +103,7 @@ class HistoryPage {
             this.transactions.push({
                 id: `stake_completed_${stake.id}`,
                 type: 'stake',
-                title: `Ставка ${stake.coinName}`,
+                title: `Сделка ${stake.coinName}`,
                 amount: stake.amount,
                 currency: 'USD',
                 date: stake.startTime,
@@ -495,7 +495,7 @@ class HistoryPage {
         const typeMap = {
             'buy': 'Покупка',
             'sell': 'Продажа',
-            'stake': 'Ставка',
+            'stake': 'Сделка',
             'deposit': 'Пополнение',
             'withdraw': 'Вывод'
         };
@@ -521,6 +521,10 @@ class HistoryPage {
         const toast = document.createElement('div');
         toast.className = `toast ${type}`;
         toast.textContent = message;
+        // Ограничиваем максимум двумя уведомлениями
+        while (toastContainer.children.length >= 2) {
+            toastContainer.removeChild(toastContainer.firstElementChild);
+        }
 
         toastContainer.appendChild(toast);
 

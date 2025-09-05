@@ -72,6 +72,19 @@ class NotificationManager {
             id = null
         } = options;
 
+        // Ограничиваем количество одновременно видимых уведомлений (максимум 2)
+        const existingNotifications = Array.from(this.container.querySelectorAll('.notification'));
+        if (existingNotifications.length >= 2) {
+            const oldest = existingNotifications[0];
+            const oldestId = oldest && oldest.dataset ? oldest.dataset.id : null;
+            if (oldestId && this.notifications.has(oldestId)) {
+                this.close(oldestId);
+            } else if (oldest && oldest.parentNode) {
+                // На случай несоответствия, удаляем напрямую
+                oldest.parentNode.removeChild(oldest);
+            }
+        }
+
         // Создаем уведомление
         const notification = this.createNotification({
             id: id || this.generateId(),

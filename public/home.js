@@ -64,6 +64,17 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 });
 
+// Безопасное форматирование процентов с ограничением диапазона
+function formatSignedPercent(value) {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric) || Number.isNaN(numeric)) {
+        return '+0.00%';
+    }
+    const clamped = Math.max(-999.99, Math.min(999.99, numeric));
+    const sign = clamped >= 0 ? '+' : '';
+    return `${sign}${clamped.toFixed(2)}%`;
+}
+
 async function initializeApp() {
     // Получаем пользователя из localStorage или устанавливаем по умолчанию
     let user = JSON.parse(localStorage.getItem('user')) || JSON.parse(localStorage.getItem('currentUser'));
@@ -312,7 +323,7 @@ function loadRecentTransactions() {
         allTransactions.push({
             id: `stake_active_${stake.id}`,
             type: 'stake',
-            title: `Ставка ${stake.coinName}`,
+            title: `Сделка ${stake.coinName}`,
             amount: -stake.amount,
             currency: 'USD',
             date: stake.startTime,
@@ -330,7 +341,7 @@ function loadRecentTransactions() {
         allTransactions.push({
             id: `stake_completed_${stake.id}`,
             type: 'stake',
-            title: `Ставка ${stake.coinName}`,
+            title: `Сделка ${stake.coinName}`,
             amount: stake.result === 'win' ? stake.winAmount : -stake.amount,
             currency: 'USD',
             date: stake.startTime,
@@ -394,16 +405,14 @@ function loadRecentTransactions() {
     } else {
         container.innerHTML = recentTransactions.map(tx => {
             const transactionInfo = getTransactionInfo(tx);
-            const sign = transactionInfo.isPositive ? '+' : '';
+            const sign = transactionInfo.isPositive ? '+' : (tx.amount < 0 ? '-' : '');
             const formattedAmount = tx.currency === 'USD' 
                 ? `$${Math.abs(tx.amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                 : `${Math.abs(tx.amount).toFixed(8)} ${tx.currency}`;
             
             return `
                 <div class="transaction-item ${transactionInfo.color}" onclick="openTransactionDetails('${tx.type}', '${tx.amount}', '${tx.currency}')">
-                    <div class="transaction-icon ${transactionInfo.color}">
-                        <i class="fas ${transactionInfo.icon}"></i>
-                    </div>
+                    <div class="transaction-icon ${transactionInfo.color}">${getTransactionIconSVG(transactionInfo, tx)}</div>
                     <div class="transaction-info">
                         <div class="transaction-details">
                             <div class="transaction-type">${transactionInfo.typeText}</div>
@@ -438,14 +447,14 @@ function getTransactionInfo(transaction) {
         case 'stake':
             if (transaction.isActive) {
                 return {
-                    typeText: `Ставка ${transaction.title.split(' ').pop()}`,
+                    typeText: `Сделка ${transaction.title.split(' ').pop()}`,
                     icon: 'fa-chart-line',
                     color: 'neutral',
                     isPositive: false
                 };
             } else {
                 return {
-                    typeText: transaction.result === 'win' ? `Победа в ставке` : `Проигрыш в ставке`,
+                    typeText: transaction.result === 'win' ? `Победа в сделке` : `Проигрыш в сделке`,
                     icon: transaction.result === 'win' ? 'fa-trophy' : 'fa-times',
                     color: transaction.result === 'win' ? 'positive' : 'negative',
                     isPositive: transaction.result === 'win'
@@ -475,6 +484,57 @@ function getTransactionInfo(transaction) {
     }
 }
 
+// Modern inline SVG icons for transactions
+function getTransactionIconSVG(info, transaction) {
+    const common = 'width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
+
+    if (transaction.type === 'stake' && transaction.isActive) {
+        // Chart line icon
+        return `<svg ${common}>
+            <polyline points="3 17 9 11 13 15 21 7"></polyline>
+            <polyline points="14 7 21 7 21 14"></polyline>
+        </svg>`;
+    }
+
+    if (transaction.type === 'stake' && transaction.result === 'win') {
+        // Trophy/check icon
+        return `<svg ${common}>
+            <path d="M8 21h8"></path>
+            <path d="M12 17c3 0 4-2 4-4V5H8v8c0 2 1 4 4 4z"></path>
+            <path d="M18 5h3a3 3 0 0 1-3 3"></path>
+            <path d="M6 5H3a3 3 0 0 0 3 3"></path>
+        </svg>`;
+    }
+
+    if (transaction.type === 'stake' && transaction.result === 'loss') {
+        // Cross in circle
+        return `<svg ${common}>
+            <circle cx="12" cy="12" r="9"></circle>
+            <line x1="15" y1="9" x2="9" y2="15"></line>
+            <line x1="9" y1="9" x2="15" y2="15"></line>
+        </svg>`;
+    }
+
+    if (transaction.type === 'deposit') {
+        return `<svg ${common}>
+            <path d="M12 5v14"></path>
+            <path d="M5 12h14"></path>
+        </svg>`;
+    }
+
+    if (transaction.type === 'withdraw') {
+        return `<svg ${common}>
+            <path d="M5 12h14"></path>
+        </svg>`;
+    }
+
+    // Fallback arrow icon
+    return `<svg ${common}>
+        <polyline points="7 17 12 12 17 17"></polyline>
+        <line x1="12" y1="12" x2="12" y2="3"></line>
+    </svg>`;
+}
+
 function updateStats() {
     // Получаем данные пользователя
     const user = JSON.parse(localStorage.getItem('user'));
@@ -502,8 +562,7 @@ function updateStats() {
     const activeStakesElement = document.getElementById('activeStakes');
 
     if (monthlyChangeElement) {
-        const sign = monthlyChange >= 0 ? '+' : '';
-        monthlyChangeElement.textContent = `${sign}${monthlyChange.toFixed(2)}%`;
+        monthlyChangeElement.textContent = formatSignedPercent(monthlyChange);
     }
     if (assetsCountElement) {
         assetsCountElement.textContent = Math.max(0, assetsCount);
@@ -626,7 +685,7 @@ function updateStatsOnBalanceChange() {
     const activeStakesElement = document.getElementById('activeStakes');
 
     if (monthlyChangeElement) {
-        monthlyChangeElement.textContent = `+${userStats.monthlyChange.toFixed(2)}%`;
+        monthlyChangeElement.textContent = formatSignedPercent(userStats.monthlyChange);
     }
     if (assetsCountElement) {
         assetsCountElement.textContent = userStats.assetsCount;
@@ -759,7 +818,13 @@ function showToast(title, message, type = 'info') {
         <div><strong>${title}</strong></div>
         <div>${message}</div>
     `;
-    
+    // Ограничиваем максимум двумя уведомлениями
+    if (toastContainer) {
+        while (toastContainer.children.length >= 2) {
+            toastContainer.removeChild(toastContainer.firstElementChild);
+        }
+    }
+
     toastContainer.appendChild(toast);
     
     setTimeout(() => {
@@ -899,7 +964,7 @@ function openStakeModal() {
 
 // Функция для возврата назад
 function goBack() {
-    window.history.back();
+    window.location.href = 'home.html';
 }
 
 // Снэпшот баланса для расчета изменения за месяц
@@ -1009,13 +1074,28 @@ async function loadMyAssets() {
 
         if (response.ok) {
             const data = await response.json();
-            if (data.success && data.portfolio && data.portfolio.length > 0) {
+            const activeStakes = JSON.parse(localStorage.getItem('activeStakes') || '[]').filter(s => s.status === 'active');
+            const hasAssets = data.success && data.portfolio && data.portfolio.length > 0;
+            if (hasAssets) {
                 displayMyAssets(container, data.portfolio);
+                if (activeStakes.length > 0) appendActiveStakesToAssets(container, activeStakes);
+            } else {
+                // If no assets but there are active stakes – show them here
+                if (activeStakes.length > 0) {
+                    container.innerHTML = '';
+                    appendActiveStakesToAssets(container, activeStakes);
+                } else {
+                    showAssetsEmpty(container, 'Нет активов');
+                }
+            }
+        } else if (response.status === 404) {
+            const activeStakes = JSON.parse(localStorage.getItem('activeStakes') || '[]').filter(s => s.status === 'active');
+            if (activeStakes.length > 0) {
+                container.innerHTML = '';
+                appendActiveStakesToAssets(container, activeStakes);
             } else {
                 showAssetsEmpty(container, 'Нет активов');
             }
-        } else if (response.status === 404) {
-            showAssetsEmpty(container, 'Нет активов');
         } else {
             console.error('Ошибка API при загрузке портфеля:', response.status);
             showAssetsEmpty(container, 'Ошибка загрузки данных');
@@ -1091,14 +1171,81 @@ function displayMyAssets(container, portfolio) {
 }
 
 function showAssetsEmpty(container, message) {
+    const isDealsEmpty = message === 'Нет активов' || message === 'Нет активных сделок';
+    const headerText = isDealsEmpty ? 'Нет активных сделок' : message;
+    const paragraphText = isDealsEmpty ? 'У вас пока нет активных сделок' : 'Попробуйте обновить страницу';
+    const actionButton = isDealsEmpty ? '<button class="text-btn" onclick="window.location.href=\'coins.html\'">Начать торговлю</button>' : '';
+
     container.innerHTML = `
         <div class="assets-empty">
             <i class="fas fa-wallet"></i>
-            <h3>${message}</h3>
-            <p>${message === 'Нет активов' ? 'У вас пока нет активов в портфеле' : 'Попробуйте обновить страницу'}</p>
-            ${message === 'Нет активов' ? '<button class="text-btn" onclick="window.location.href=\'coins.html\'">Начать торговлю</button>' : ''}
+            <h3>${headerText}</h3>
+            <p>${paragraphText}</p>
+            ${actionButton}
         </div>
     `;
+}
+
+// Append active stakes block into assets list
+function appendActiveStakesToAssets(container, activeStakes) {
+    const block = document.createElement('div');
+    block.className = 'active-stakes-inline';
+    block.innerHTML = `
+        <div class="section-header">
+            <h2>Активные сделки</h2>
+            <span class="stakes-count">${activeStakes.length}</span>
+        </div>
+        <div class="stakes-list">
+            ${activeStakes.map(stake => {
+                const timeLeftMs = new Date(stake.endTime) - new Date();
+                const hours = Math.max(0, Math.floor(timeLeftMs / (1000 * 60 * 60)));
+                const minutes = Math.max(0, Math.floor((timeLeftMs % (1000 * 60 * 60)) / (1000 * 60)));
+                const seconds = Math.max(0, Math.floor((timeLeftMs % (1000 * 60)) / 1000));
+                const total = new Date(stake.endTime) - new Date(stake.startTime);
+                const elapsed = Date.now() - new Date(stake.startTime).getTime();
+                const progress = Math.min(100, Math.max(0, (elapsed / total) * 100));
+                return `
+                <div class="stake-item">
+                    <div class="stake-info">
+                        <div class="stake-coin">${stake.coinName} (${stake.coinSymbol})</div>
+                        <div class="stake-details">$${Number(stake.amount || 0).toFixed(2)} • ${getPeriodText(stake.period || stake.timeHours * 60)}</div>
+                    </div>
+                    <div class="stake-progress">
+                        <div class="progress-bar"><div class="progress-fill" style="width: ${progress}%"></div></div>
+                        <div class="timer-value">${hours}ч ${minutes}м ${seconds}с</div>
+                    </div>
+                </div>`;
+            }).join('')}
+        </div>
+    `;
+    container.appendChild(block);
+
+    // Start per-second updater for inline stakes
+    if (window._inlineStakesTimer) clearInterval(window._inlineStakesTimer);
+    window._inlineStakesTimer = setInterval(() => {
+        const saved = JSON.parse(localStorage.getItem('activeStakes') || '[]').filter(s => s.status === 'active');
+        const list = container.querySelectorAll('.active-stakes-inline .stake-item');
+        list.forEach((el, idx) => {
+            const stake = saved[idx];
+            if (!stake) return;
+            const timeLeft = new Date(stake.endTime) - new Date();
+            const hours = Math.max(0, Math.floor(timeLeft / (1000 * 60 * 60)));
+            const minutes = Math.max(0, Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60)));
+            const seconds = Math.max(0, Math.floor((timeLeft % (1000 * 60)) / 1000));
+            const total = new Date(stake.endTime) - new Date(stake.startTime);
+            const elapsed = Date.now() - new Date(stake.startTime).getTime();
+            const progress = Math.min(100, Math.max(0, (elapsed / total) * 100));
+            const timerEl = el.querySelector('.timer-value');
+            const barEl = el.querySelector('.progress-fill');
+            if (timerEl) timerEl.textContent = `${hours}ч ${minutes}м ${seconds}с`;
+            if (barEl) barEl.style.width = `${progress}%`;
+        });
+        // stop timer if no active block remains
+        if (!document.querySelector('.active-stakes-inline')) {
+            clearInterval(window._inlineStakesTimer);
+            window._inlineStakesTimer = null;
+        }
+    }, 1000);
 }
 
 function switchAssetsView(view) {

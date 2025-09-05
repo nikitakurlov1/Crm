@@ -137,16 +137,21 @@ body {
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
 }
 
-/* Price Display */
-.price-display {
-    padding: 20px;
+/* Combined header: price left, coin info right, one frame */
+.coin-header.combined {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 16px 20px;
     border-bottom: 1px solid #F2F2F7;
 }
 
-.current-price {
+.coin-header.combined .current-price {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 6px;
+    align-items: flex-start;
 }
 
 .price-header {
@@ -218,19 +223,38 @@ body {
     line-height: 1.1;
 }
 
-.price-change-container {
+.coin-header.combined .price-change-container {
     display: flex;
     align-items: center;
-    gap: 12px;
-    flex-wrap: wrap;
+    gap: 8px;
 }
 
-.price-change {
+.coin-header.combined .price-change {
     display: flex;
     align-items: center;
     gap: 6px;
-    font-size: 16px;
+    font-size: 14px;
     font-weight: 600;
+}
+.coin-header.combined .coin-info.right-aligned {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.coin-header.combined .coin-details {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    align-items: flex-end;
+}
+
+.coin-header.combined .coin-name {
+    font-size: 16px;
+}
+
+.coin-header.combined .coin-symbol {
+    display: none;
 }
 
 .price-change.positive {
@@ -501,6 +525,17 @@ body {
 .active-stakes-btn i {
     margin-right: 8px;
     font-size: 16px;
+}
+
+/* Minimalist dot for active deals */
+.active-stakes-btn .dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #34C759;
+    margin-right: 8px;
+    box-shadow: 0 0 0 4px rgba(52,199,89,0.12);
 }
 
 .stakes-count {
@@ -1343,20 +1378,22 @@ select.form-input:focus {
 /* Toast Notifications */
 .toast-container {
     position: fixed;
-    top: 20px;
-    right: 20px;
+    top: 16px;
+    right: 16px;
     z-index: 10000;
-    max-width: 300px;
+    max-width: 280px;
 }
 
 .toast {
     background: #F2F2F7;
     color: #000000;
-    padding: 16px;
+    padding: 10px 12px;
     border-radius: 8px;
-    margin-bottom: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    animation: slideIn 0.3s ease;
+    margin-bottom: 6px;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+    animation: slideIn 0.25s ease;
+    font-size: 13px;
+    line-height: 1.35;
 }
 
 .toast.success {

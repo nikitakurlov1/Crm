@@ -2572,7 +2572,9 @@ app.get('/api/users/:userId/portfolio/transactions', async (req, res) => {
     }
 
     const decoded = jwt.verify(token, JWT_SECRET);
-    if (decoded.userId !== req.params.userId) {
+    // Allow alias 'current' for the authenticated user
+    const requestedUserId = req.params.userId === 'current' ? decoded.userId : req.params.userId;
+    if (decoded.userId !== requestedUserId) {
       return res.status(403).json({
         success: false,
         errors: ['Доступ запрещен']
@@ -2587,7 +2589,7 @@ app.get('/api/users/:userId/portfolio/transactions', async (req, res) => {
       limit: req.query.limit ? parseInt(req.query.limit) : 50
     };
 
-    const transactions = await db.getPortfolioTransactions(req.params.userId, filters);
+    const transactions = await db.getPortfolioTransactions(requestedUserId, filters);
 
     res.json({
       success: true,

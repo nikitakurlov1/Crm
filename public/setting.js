@@ -133,6 +133,10 @@ class SettingsPage {
         const toast = document.createElement('div');
         toast.className = `toast ${type}`;
         toast.textContent = message;
+        // Ограничиваем максимум двумя уведомлениями
+        while (toastContainer.children.length >= 2) {
+            toastContainer.removeChild(toastContainer.firstElementChild);
+        }
 
         toastContainer.appendChild(toast);
 

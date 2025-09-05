@@ -417,7 +417,13 @@ function showToast(title, message, type = 'info') {
         <div><strong>${title}</strong></div>
         <div>${message}</div>
     `;
-    
+    // Ограничиваем максимум двумя уведомлениями
+    if (toastContainer) {
+        while (toastContainer.children.length >= 2) {
+            toastContainer.removeChild(toastContainer.firstElementChild);
+        }
+    }
+
     toastContainer.appendChild(toast);
     
     setTimeout(() => {

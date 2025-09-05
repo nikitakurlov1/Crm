@@ -317,7 +317,7 @@ class CoinInfoPage {
             }
         }
         
-        let html = '<div class="multiplier-title">Коэффициенты выигрыша:</div>';
+        let html = '<div class="multiplier-title">Коэффициенты дохода:</div>';
         html += '<div class="multiplier-subtitle">Чем больше изменение цены, тем выше выигрыш</div>';
         html += '<div class="multiplier-examples">';
         
@@ -339,7 +339,7 @@ class CoinInfoPage {
         });
         
         html += '</div>';
-        html += '<div class="multiplier-note">* Коэффициенты зависят от времени ставки и изменения цены</div>';
+        html += '<div class="multiplier-note">* Коэффициенты зависят от времени сделки и изменения цены</div>';
         multiplierInfo.innerHTML = html;
     }
 
@@ -540,6 +540,8 @@ class CoinInfoPage {
         activeStakes.forEach(stake => {
             const timeLeft = this.getTimeLeft(stake.endTime);
             const progress = this.getStakeProgress(stake.startTime, stake.endTime);
+            const profit = this.getInstantProfit(stake);
+            const profitClass = profit >= 0 ? 'positive' : 'negative';
             
             html += `
                 <div class="stake-item">
@@ -568,11 +570,15 @@ class CoinInfoPage {
                         <div class="start-price">Начальная: $${stake.startPrice.toFixed(2)}</div>
                         <div class="current-price">Текущая: $${this.currentPrice.toFixed(2)}</div>
                     </div>
+                    <div class="stake-profit ${profitClass}">Текущая прибыль: $${Math.abs(profit).toFixed(2)}</div>
                 </div>
             `;
         });
         
         activeStakesList.innerHTML = html;
+
+        // Start live ticker to update time/progress/profit every second while modal visible
+        this.startActiveStakesTicker();
     }
 
     // Получение оставшегося времени
@@ -584,8 +590,9 @@ class CoinInfoPage {
         
         const hours = Math.floor(timeLeft / (1000 * 60 * 60));
         const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
         
-        return `${hours}ч ${minutes}м`;
+        return `${hours}ч ${minutes}м ${seconds}с`;
     }
 
     // Получение прогресса ставки
@@ -595,6 +602,53 @@ class CoinInfoPage {
         const elapsed = now - startTime;
         
         return Math.min(100, Math.max(0, (elapsed / total) * 100));
+    }
+
+    // Моментальная прибыль на основе изменения цены и направления
+    getInstantProfit(stake) {
+        if (!this.currentPrice || !stake || !stake.startPrice) return 0;
+        const priceChangePercent = ((this.currentPrice - stake.startPrice) / stake.startPrice) * 100;
+        const directionSign = stake.direction === 'up' ? 1 : -1;
+        const effectiveMultiplier = (stake.dynamicMultiplier || stake.baseMultiplier || 1);
+        const profitPercent = priceChangePercent * directionSign * (effectiveMultiplier - 1);
+        const profit = (stake.amount || 0) * (profitPercent / 100);
+        return profit;
+    }
+
+    startActiveStakesTicker() {
+        // Clear previous ticker
+        if (this._stakesTicker) {
+            clearInterval(this._stakesTicker);
+        }
+        const modalEl = document.getElementById('activeStakesModal');
+        this._stakesTicker = setInterval(() => {
+            if (!modalEl || modalEl.style.display === 'none') {
+                clearInterval(this._stakesTicker);
+                this._stakesTicker = null;
+                return;
+            }
+            // Update each item values
+            const items = modalEl.querySelectorAll('.stake-item');
+            const now = new Date();
+            items.forEach((item, idx) => {
+                const stake = this.activeStakes.filter(s => s.status === 'active')[idx];
+                if (!stake) return;
+                const timeText = this.getTimeLeft(stake.endTime);
+                const progress = this.getStakeProgress(stake.startTime, stake.endTime);
+                const profit = this.getInstantProfit(stake);
+                const timeEl = item.querySelector('.time-left');
+                const barEl = item.querySelector('.progress-fill');
+                const curPriceEl = item.querySelector('.current-price');
+                const profitEl = item.querySelector('.stake-profit');
+                if (timeEl) timeEl.textContent = timeText;
+                if (barEl) barEl.style.width = `${progress}%`;
+                if (curPriceEl) curPriceEl.textContent = `Текущая: $${this.currentPrice.toFixed(2)}`;
+                if (profitEl) {
+                    profitEl.textContent = `Текущая прибыль: $${Math.abs(profit).toFixed(2)}`;
+                    profitEl.className = `stake-profit ${profit >= 0 ? 'positive' : 'negative'}`;
+                }
+            });
+        }, 1000);
     }
 
     // Открытие модального окна активных ставок
@@ -608,7 +662,7 @@ class CoinInfoPage {
     }
 
     goBack() {
-        window.history.back();
+        navigateBackSmart();
     }
 
     openStakeModal(direction = 'up') {
@@ -1097,17 +1151,25 @@ class CoinInfoPage {
     }
 
     shareCoin() {
-        if (navigator.share) {
-            navigator.share({
-                title: `${this.currentCoin.name} (${this.currentCoin.symbol})`,
-                text: `Текущая цена ${this.currentCoin.name}: $${this.currentPrice.toLocaleString()}`,
-                url: window.location.href
-            });
-        } else {
-            // Fallback for browsers that don't support Web Share API
-            navigator.clipboard.writeText(`${this.currentCoin.name} (${this.currentCoin.symbol}): $${this.currentPrice.toLocaleString()}`);
+        // Guard removed share button; keep method safe if called elsewhere
+        if (!navigator.share) {
+            navigator.clipboard.writeText(`${this.currentCoin?.name || 'Coin'} (${this.currentCoin?.symbol || ''}): $${(this.currentPrice || 0).toLocaleString()}`);
             this.showToast('Ссылка скопирована в буфер обмена', 'success');
+            return;
         }
+        navigator.share({
+            title: `${this.currentCoin?.name || 'Coin'} (${this.currentCoin?.symbol || ''})`,
+            text: `Текущая цена ${(this.currentCoin?.name || 'Coin')}: $${(this.currentPrice || 0).toLocaleString()}`,
+            url: window.location.href
+        }).catch((err) => {
+            // Swallow AbortError (user canceled share), show info toast; log others
+            if (err && (err.name === 'AbortError' || err.message?.toLowerCase().includes('abort'))) {
+                this.showToast('Поделиться отменено', 'info');
+                return;
+            }
+            console.error('Share failed:', err);
+            this.showToast('Не удалось поделиться', 'error');
+        });
     }
 
     initChart() {
@@ -1498,8 +1560,25 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // Global functions for HTML onclick handlers
-function goBack() {
-    window.history.back();
+function navigateBackSmart() {
+    try {
+        const ref = document.referrer || '';
+        const sameOrigin = ref.startsWith(`${location.protocol}//${location.host}`);
+        if (sameOrigin && ref) {
+            window.history.back();
+            return;
+        }
+    } catch (_) {}
+    const last = sessionStorage.getItem('lastListPage');
+    if (last === 'coins') {
+        window.location.href = 'coins.html';
+    } else if (last === 'home') {
+        window.location.href = 'home.html';
+    } else {
+        // Fallback: prefer coins, then home
+        const cameFromCoins = document.referrer && document.referrer.includes('coins.html');
+        window.location.href = cameFromCoins ? 'coins.html' : 'home.html';
+    }
 }
 
 function openStakeModal(direction = 'up') {
