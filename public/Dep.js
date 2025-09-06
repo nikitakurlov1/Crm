@@ -10,9 +10,9 @@ function initializePage() {
     showPaymentDetails('card');
     setupFileUpload();
     
-    // Восстанавливаем выбранную валюту или устанавливаем USD по умолчанию
-    const savedCurrency = localStorage.getItem('selectedCurrency') || 'USD';
-    selectCurrency(savedCurrency);
+    // Устанавливаем USD как стандартную валюту
+    localStorage.setItem('selectedCurrency', 'USD');
+    updatePaymentRequisites('USD');
 }
 
 function setupEventListeners() {

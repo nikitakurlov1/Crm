@@ -121,6 +121,17 @@ body {
     border-color: #4A88FF;
 }
 
+.amount-description {
+    margin-top: 8px;
+    text-align: center;
+}
+
+.amount-info-text {
+    font-size: 14px;
+    color: #8e8e93;
+    font-weight: 500;
+}
+
 .currency-selector {
     display: flex;
     gap: 4px;

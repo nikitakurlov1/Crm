@@ -9,9 +9,8 @@ function initializePage() {
     // Устанавливаем начальное состояние
     showRecipientDetails('card');
     
-    // Восстанавливаем выбранную валюту или устанавливаем USD по умолчанию
-    const savedCurrency = localStorage.getItem('selectedCurrency') || 'USD';
-    selectCurrency(savedCurrency);
+    // Устанавливаем USD как стандартную валюту
+    localStorage.setItem('selectedCurrency', 'USD');
     
     // Устанавливаем комиссии по умолчанию
     updateFees();
@@ -84,8 +83,8 @@ async function loadUserBalance() {
 
         const balanceElement = document.getElementById('availableBalance');
         if (balanceElement) {
-            const currency = localStorage.getItem('selectedCurrency') || 'USD';
-            const symbol = getCurrencySymbol(currency);
+            const currency = 'USD'; // Теперь всегда используем USD
+            const symbol = '$'; // Всегда долларовый символ
             balanceElement.textContent = `${symbol}${balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
         }
 
@@ -99,8 +98,8 @@ async function loadUserBalance() {
         const balance = user.balance || 0;
         const balanceElement = document.getElementById('availableBalance');
         if (balanceElement) {
-            const currency = localStorage.getItem('selectedCurrency') || 'USD';
-            const symbol = getCurrencySymbol(currency);
+            const currency = 'USD'; // Теперь всегда используем USD
+            const symbol = '$'; // Всегда долларовый символ
             balanceElement.textContent = `${symbol}${balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
         }
     }
@@ -227,8 +226,8 @@ function setHalfAmount() {
 
 function updateFees() {
     const amount = parseFloat(document.getElementById('withdrawAmount').value) || 0;
-    const currency = localStorage.getItem('selectedCurrency') || 'USD';
-    const symbol = getCurrencySymbol(currency);
+    const currency = 'USD'; // Теперь всегда используем USD
+    const symbol = '$'; // Всегда долларовый символ
     
     // Рассчитываем комиссию (например, 2.5%)
     const feeRate = 0.025;

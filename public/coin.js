@@ -454,25 +454,13 @@ function showLoading(show) {
 }
 
 function showNotification(title, message, type = 'info') {
-    const notification = document.createElement('div');
-    notification.className = `notification ${type}`;
+    // Use centralized notification system
+    if (window.notificationManager) {
+        return window.notificationManager.show(message, type, { title });
+    }
     
-    notification.innerHTML = `
-        <h4>${title}</h4>
-        <p>${message}</p>
-    `;
-
-    notificationContainer.appendChild(notification);
-
-    // Auto remove after 5 seconds
-    setTimeout(() => {
-        notification.remove();
-    }, 5000);
-
-    // Remove on click
-    notification.addEventListener('click', () => {
-        notification.remove();
-    });
+    // Fallback for simple notification
+    console.log(`${type.toUpperCase()}: ${title} - ${message}`);
 }
 
 function handleLogout() {

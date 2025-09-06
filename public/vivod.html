@@ -53,19 +53,8 @@
                     <div class="amount-input-container">
                         <input type="number" id="withdrawAmount" class="amount-input" placeholder="0.00" min="1" step="0.01">
                     </div>
-                    <div class="currency-selector">
-                        <button class="currency-btn active" data-currency="USD" onclick="selectCurrency('USD')">
-                            <span class="currency-symbol">$</span>
-                            <span class="currency-code">USD</span>
-                        </button>
-                        <button class="currency-btn" data-currency="EUR" onclick="selectCurrency('EUR')">
-                            <span class="currency-symbol">€</span>
-                            <span class="currency-code">EUR</span>
-                        </button>
-                        <button class="currency-btn" data-currency="RUB" onclick="selectCurrency('RUB')">
-                            <span class="currency-symbol">₽</span>
-                            <span class="currency-code">RUB</span>
-                        </button>
+                    <div class="amount-description">
+                        <span class="amount-info-text">Введите сумму в долларах</span>
                     </div>
                     <div class="amount-actions">
                         <button class="amount-action-btn" onclick="setMaxAmount()">Максимум</button>

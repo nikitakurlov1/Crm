@@ -15,6 +15,9 @@ document.addEventListener('DOMContentLoaded', async function() {
         const payload = JSON.parse(atob(authToken.split('.')[1]));
         console.log('JWT payload:', payload);
 
+        // Сначала устанавливаем состояние загрузки
+        setLoadingState();
+
         // Загружаем данные пользователя
         const user = JSON.parse(localStorage.getItem('user')) || {
             id: payload.userId,
@@ -40,9 +43,9 @@ document.addEventListener('DOMContentLoaded', async function() {
             console.error('Ошибка загрузки баланса при инициализации:', error);
         }
 
-        // Инициализируем интерфейс
+        // Инициализируем интерфейс последовательно с правильной синхронизацией
         initializeBalanceToggle();
-        await loadBalance();
+        await loadBalanceAndStats();
         await loadAssets();
         await loadRecentTransactions();
         
@@ -51,10 +54,19 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         // Автоматическое обновление баланса каждые 10 секунд
         setInterval(async () => {
-            await loadBalance();
+            await loadBalanceAndStats();
         }, 10000);
         
         console.log('Главная страница инициализирована');
+        
+        // Listen for balance updates from spot trading
+        window.addEventListener('storage', function(e) {
+            if (e.key === 'balanceUpdate') {
+                console.log('Balance update detected from spot trading');
+                loadBalanceAndStats();
+            }
+        });
+        
     } catch (error) {
         console.error('Ошибка инициализации:', error);
         // Если есть ошибка с токеном, перенаправляем на логин
@@ -73,6 +85,15 @@ function formatSignedPercent(value) {
     const clamped = Math.max(-999.99, Math.min(999.99, numeric));
     const sign = clamped >= 0 ? '+' : '';
     return `${sign}${clamped.toFixed(2)}%`;
+}
+
+// Безопасное форматирование чисел
+function formatNumber(value) {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric) || Number.isNaN(numeric)) {
+        return '0';
+    }
+    return numeric.toString();
 }
 
 async function initializeApp() {
@@ -208,7 +229,29 @@ async function loadDashboardData() {
     updateStats();
 }
 
-async function loadBalance() {
+// Функция состояния загрузки
+function setLoadingState() {
+    const balanceElement = document.getElementById('totalBalance');
+    const monthlyTransactionsElement = document.getElementById('monthlyTransactions');
+    const assetsCountElement = document.getElementById('assetsCount');
+    const activeStakesElement = document.getElementById('activeStakes');
+
+    if (balanceElement) {
+        balanceElement.textContent = 'Загрузка...';
+    }
+    if (monthlyTransactionsElement) {
+        monthlyTransactionsElement.textContent = 'Загрузка...';
+    }
+    if (assetsCountElement) {
+        assetsCountElement.textContent = 'Загрузка...';
+    }
+    if (activeStakesElement) {
+        activeStakesElement.textContent = 'Загрузка...';
+    }
+}
+
+// Объединенная функция для загрузки баланса и статистики
+async function loadBalanceAndStats() {
     const user = JSON.parse(localStorage.getItem('user'));
     const authToken = localStorage.getItem('authToken');
     
@@ -218,7 +261,6 @@ async function loadBalance() {
 
     try {
         // Получаем актуальный баланс из базы данных
-        // Используем userId из JWT токена
         const payload = JSON.parse(atob(authToken.split('.')[1]));
         const response = await fetch(`/api/users/${payload.userId}/balance`, {
             headers: {
@@ -237,38 +279,43 @@ async function loadBalance() {
     } catch (error) {
         console.error('Ошибка загрузки баланса:', error);
     }
+    
+    // Check for spot trading balance updates
+    const spotBalance = JSON.parse(localStorage.getItem('spotBalance')) || {};
+    if (spotBalance.USDT !== undefined) {
+        // Update main balance with spot USDT balance
+        user.balance = spotBalance.USDT;
+        localStorage.setItem('user', JSON.stringify(user));
+        console.log('Updated balance from spot trading:', user.balance);
+    }
 
+    // Синхронно обновляем отображение баланса и статистики
+    updateBalanceDisplay(user);
+    updateStatsDisplay();
+}
+
+// Отдельная функция для обновления отображения баланса
+function updateBalanceDisplay(user) {
     const balance = user ? user.balance : 0;
     const balanceElement = document.getElementById('totalBalance');
-    const changeElement = document.getElementById('balanceChange');
     const hideBalance = localStorage.getItem('hideBalance') === 'true';
     
     if (balanceElement) {
         if (hideBalance) {
             balanceElement.textContent = '***';
         } else {
-            balanceElement.textContent = `$${balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            // Используем фиксированное форматирование с всегда 2 десятичными знаками
+            balanceElement.textContent = `$${balance.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`;
         }
     }
     
     // Инициализируем/обновляем снэпшот для расчета изменения за месяц
     ensureMonthlySnapshot(balance);
+}
 
-    if (changeElement) {
-        // Пока отображаем нейтральное изменение баланса (не месячное)
-        if (balance <= 0) {
-            changeElement.innerHTML = `<i class="fas fa-minus"></i> $0.00 (+0.00%)`;
-            changeElement.className = `balance-change neutral`;
-        } else {
-            const icon = 'fa-minus';
-            const color = 'neutral';
-            changeElement.innerHTML = `<i class="fas ${icon}"></i> $0.00 (0.00%)`;
-            changeElement.className = `balance-change ${color}`;
-        }
-    }
-    
-    // Обновляем статистику при изменении баланса
-    updateStats();
+// Устаревшая функция для обратной совместимости
+async function loadBalance() {
+    await loadBalanceAndStats();
 }
 
 
@@ -332,6 +379,22 @@ function loadRecentTransactions() {
             icon: 'fas fa-chart-line',
             profit: 0,
             isActive: true
+        });
+    });
+    
+    // Spot trading orders
+    const spotOrderHistory = JSON.parse(localStorage.getItem('spotOrderHistory')) || [];
+    spotOrderHistory.forEach(order => {
+        allTransactions.push({
+            id: `spot_${order.id}`,
+            type: order.side, // 'buy' or 'sell'
+            title: `${order.side === 'buy' ? 'Покупка' : 'Продажа'} ${order.baseAsset}`,
+            amount: order.side === 'buy' ? -order.total : order.total,
+            currency: order.quoteAsset,
+            date: order.timestamp,
+            status: 'completed',
+            details: `${order.amount.toFixed(8)} ${order.baseAsset} • $${order.price.toFixed(2)}`,
+            icon: order.side === 'buy' ? 'fas fa-arrow-up' : 'fas fa-arrow-down'
         });
     });
 
@@ -535,7 +598,8 @@ function getTransactionIconSVG(info, transaction) {
     </svg>`;
 }
 
-function updateStats() {
+// Обновленная функция для синхронного обновления статистики
+function updateStatsDisplay() {
     // Получаем данные пользователя
     const user = JSON.parse(localStorage.getItem('user'));
     const userBalance = user ? user.balance : 0;
@@ -544,32 +608,109 @@ function updateStats() {
     const activeStakes = JSON.parse(localStorage.getItem('activeStakes')) || [];
     const activeStakesCount = activeStakes.filter(stake => stake.status === 'active').length;
     
-    // Подсчитываем количество активов (покупки - продажи)
+    // Подсчитываем количество активов (покупки - продажи + spot trading assets)
     const purchases = JSON.parse(localStorage.getItem('purchases')) || [];
     const sales = JSON.parse(localStorage.getItem('sales')) || [];
-    const assetsCount = purchases.length - sales.length;
+    let assetsCount = purchases.length - sales.length;
     
-    // Рассчитываем изменение за месяц на основе снэпшота
-    const snapshot = getMonthlySnapshot();
-    let monthlyChange = 0;
-    if (snapshot && snapshot.amount > 0) {
-        monthlyChange = ((userBalance - snapshot.amount) / snapshot.amount) * 100;
-    }
+    // Add spot trading assets
+    const spotBalance = JSON.parse(localStorage.getItem('spotBalance')) || {};
+    const spotAssets = Object.keys(spotBalance).filter(asset => 
+        asset !== 'USDT' && spotBalance[asset] > 0
+    ).length;
+    assetsCount += spotAssets;
     
-    // Обновляем отображение статистики
-    const monthlyChangeElement = document.getElementById('monthlyChange');
+    // Рассчитываем количество сделок за месяц
+    const monthlyTransactions = calculateMonthlyTransactions();
+    
+    // Обновляем отображение статистики единовременно
+    const monthlyTransactionsElement = document.getElementById('monthlyTransactions');
     const assetsCountElement = document.getElementById('assetsCount');
     const activeStakesElement = document.getElementById('activeStakes');
 
-    if (monthlyChangeElement) {
-        monthlyChangeElement.textContent = formatSignedPercent(monthlyChange);
+    if (monthlyTransactionsElement) {
+        monthlyTransactionsElement.textContent = formatNumber(monthlyTransactions);
     }
     if (assetsCountElement) {
-        assetsCountElement.textContent = Math.max(0, assetsCount);
+        assetsCountElement.textContent = formatNumber(Math.max(0, assetsCount));
     }
     if (activeStakesElement) {
-        activeStakesElement.textContent = activeStakesCount;
+        activeStakesElement.textContent = formatNumber(activeStakesCount);
     }
+}
+
+// Функция для подсчета сделок за месяц
+function calculateMonthlyTransactions() {
+    const now = new Date();
+    const oneMonthAgo = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+    
+    let monthlyCount = 0;
+    
+    // Считаем покупки за месяц
+    const purchases = JSON.parse(localStorage.getItem('purchases')) || [];
+    monthlyCount += purchases.filter(purchase => {
+        const purchaseDate = new Date(purchase.date || purchase.timestamp);
+        return purchaseDate >= oneMonthAgo;
+    }).length;
+    
+    // Считаем продажи за месяц
+    const sales = JSON.parse(localStorage.getItem('sales')) || [];
+    monthlyCount += sales.filter(sale => {
+        const saleDate = new Date(sale.date || sale.timestamp);
+        return saleDate >= oneMonthAgo;
+    }).length;
+    
+    // Считаем ставки за месяц (активные + завершенные)
+    const activeStakes = JSON.parse(localStorage.getItem('activeStakes')) || [];
+    monthlyCount += activeStakes.filter(stake => {
+        const stakeDate = new Date(stake.startTime || stake.date);
+        return stakeDate >= oneMonthAgo;
+    }).length;
+    
+    const stakeHistory = JSON.parse(localStorage.getItem('stakeHistory')) || [];
+    monthlyCount += stakeHistory.filter(stake => {
+        const stakeDate = new Date(stake.startTime || stake.date);
+        return stakeDate >= oneMonthAgo;
+    }).length;
+    
+    // Считаем депозиты за месяц
+    const deposits = JSON.parse(localStorage.getItem('deposits')) || [];
+    monthlyCount += deposits.filter(deposit => {
+        const depositDate = new Date(deposit.date || deposit.timestamp);
+        return depositDate >= oneMonthAgo;
+    }).length;
+    
+    // Считаем выводы за месяц
+    const withdrawals = JSON.parse(localStorage.getItem('withdrawals')) || [];
+    monthlyCount += withdrawals.filter(withdrawal => {
+        const withdrawalDate = new Date(withdrawal.date || withdrawal.timestamp);
+        return withdrawalDate >= oneMonthAgo;
+    }).length;
+    
+    // Считаем spot trading сделки за месяц
+    const spotOrderHistory = JSON.parse(localStorage.getItem('spotOrderHistory')) || [];
+    monthlyCount += spotOrderHistory.filter(order => {
+        const orderDate = new Date(order.timestamp);
+        return orderDate >= oneMonthAgo;
+    }).length;
+    
+    return monthlyCount;
+}
+
+// Global function to update home balance from other pages
+window.updateHomeBalance = function() {
+    loadBalanceAndStats();
+};
+
+// Global function to refresh home data
+window.refreshHomeData = function() {
+    loadBalanceAndStats();
+    loadRecentTransactions();
+};
+
+// Устаревшая функция для обратной совместимости
+function updateStats() {
+    updateStatsDisplay();
 }
 
 function loadActiveStakes() {
@@ -649,51 +790,7 @@ function loadActiveStakes() {
     }
 }
 
-// Функция для обновления статистики при изменении баланса
-function updateStatsOnBalanceChange() {
-    const user = JSON.parse(localStorage.getItem('user'));
-    const userBalance = user ? user.balance : 0;
-    
-    // Если баланс нулевой, показываем все нули
-    if (userBalance <= 0) {
-        const monthlyChangeElement = document.getElementById('monthlyChange');
-        const assetsCountElement = document.getElementById('assetsCount');
-        const activeStakesElement = document.getElementById('activeStakes');
 
-        if (monthlyChangeElement) {
-            monthlyChangeElement.textContent = '+0.00%';
-        }
-        if (assetsCountElement) {
-            assetsCountElement.textContent = '0';
-        }
-        if (activeStakesElement) {
-            activeStakesElement.textContent = '0';
-        }
-        return;
-    }
-
-    // Получаем настоящие данные из localStorage или используем значения по умолчанию
-    const userStats = JSON.parse(localStorage.getItem('userStats')) || {
-        monthlyChange: 2.92,
-        assetsCount: 5,
-        activeStakes: 0
-    };
-
-    // Обновляем отображение статистики
-    const monthlyChangeElement = document.getElementById('monthlyChange');
-    const assetsCountElement = document.getElementById('assetsCount');
-    const activeStakesElement = document.getElementById('activeStakes');
-
-    if (monthlyChangeElement) {
-        monthlyChangeElement.textContent = formatSignedPercent(userStats.monthlyChange);
-    }
-    if (assetsCountElement) {
-        assetsCountElement.textContent = userStats.assetsCount;
-    }
-    if (activeStakesElement) {
-        activeStakesElement.textContent = userStats.activeStakes;
-    }
-}
 
 function startStakesTimers(stakes) {
     stakes.forEach(stake => {
@@ -895,7 +992,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Пересчитываем показатели без случайностей
                 ensureMonthlySnapshot(user.balance);
-                loadBalance();
+                await loadBalanceAndStats();
                 closeModal('depositModal');
                 showToast('Успех', `Баланс пополнен на $${amount.toFixed(2)}`, 'success');
             });
@@ -922,7 +1019,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Пересчитываем показатели без случайностей
                 ensureMonthlySnapshot(user.balance);
-                loadBalance();
+                await loadBalanceAndStats();
                 closeModal('withdrawModal');
                 showToast('Успех', `Выведено $${amount.toFixed(2)}`, 'success');
             });
@@ -942,7 +1039,7 @@ function scrollToTransactions() {
         transactionsSection.scrollIntoView({ behavior: 'smooth' });
         // Обновляем данные транзакций
         loadRecentTransactions();
-        updateStats();
+        updateStatsDisplay();
     }
 }
 
@@ -1055,7 +1152,7 @@ async function loadMyAssets() {
     try {
         const token = localStorage.getItem('authToken');
         if (!token) {
-            showAssetsEmpty(container, 'Нет активов');
+            loadUserOwnedAssets(container);
             return;
         }
 
@@ -1085,7 +1182,8 @@ async function loadMyAssets() {
                     container.innerHTML = '';
                     appendActiveStakesToAssets(container, activeStakes);
                 } else {
-                    showAssetsEmpty(container, 'Нет активов');
+                    // Load user owned assets from localStorage instead of showing empty
+                    loadUserOwnedAssets(container);
                 }
             }
         } else if (response.status === 404) {
@@ -1094,16 +1192,126 @@ async function loadMyAssets() {
                 container.innerHTML = '';
                 appendActiveStakesToAssets(container, activeStakes);
             } else {
-                showAssetsEmpty(container, 'Нет активов');
+                // Load user owned assets from localStorage instead of showing empty
+                loadUserOwnedAssets(container);
             }
         } else {
             console.error('Ошибка API при загрузке портфеля:', response.status);
-            showAssetsEmpty(container, 'Ошибка загрузки данных');
+            // Load user owned assets from localStorage as fallback
+            loadUserOwnedAssets(container);
         }
     } catch (error) {
         console.error('Ошибка загрузки моих активов:', error);
-        showAssetsEmpty(container, 'Ошибка загрузки данных');
+        // Load user owned assets from localStorage as fallback
+        loadUserOwnedAssets(container);
     }
+}
+
+// New function to load user owned assets from localStorage
+function loadUserOwnedAssets(container) {
+    // Get spot trading balance
+    const spotBalance = JSON.parse(localStorage.getItem('spotBalance') || '{}');
+    
+    // Get all owned cryptocurrencies (excluding USDT)
+    const ownedAssets = Object.entries(spotBalance)
+        .filter(([symbol, amount]) => symbol !== 'USDT' && amount > 0)
+        .map(([symbol, amount]) => ({
+            coinSymbol: symbol,
+            coinName: getCoinNameBySymbol(symbol),
+            balance: amount,
+            profitLossPercent: 0 // We don't have real-time profit/loss data
+        }));
+    
+    // Get purchased assets from purchases history
+    const purchases = JSON.parse(localStorage.getItem('purchases') || '[]');
+    const sales = JSON.parse(localStorage.getItem('sales') || '[]');
+    
+    // Calculate net purchases (purchases - sales)
+    const netPurchases = {};
+    purchases.forEach(purchase => {
+        const symbol = purchase.coinSymbol;
+        if (!netPurchases[symbol]) {
+            netPurchases[symbol] = {
+                coinSymbol: symbol,
+                coinName: purchase.coinName,
+                amount: 0,
+                totalSpent: 0
+            };
+        }
+        netPurchases[symbol].amount += purchase.coinAmount;
+        netPurchases[symbol].totalSpent += purchase.amount;
+    });
+    
+    sales.forEach(sale => {
+        const symbol = sale.coinSymbol;
+        if (netPurchases[symbol]) {
+            netPurchases[symbol].amount -= sale.coinAmount;
+            netPurchases[symbol].totalSpent -= sale.amount;
+        }
+    });
+    
+    // Add net purchases that have positive amounts
+    Object.values(netPurchases).forEach(purchase => {
+        if (purchase.amount > 0) {
+            const existingAsset = ownedAssets.find(asset => asset.coinSymbol === purchase.coinSymbol);
+            if (existingAsset) {
+                existingAsset.balance += purchase.amount;
+            } else {
+                ownedAssets.push({
+                    coinSymbol: purchase.coinSymbol,
+                    coinName: purchase.coinName,
+                    balance: purchase.amount,
+                    profitLossPercent: 0
+                });
+            }
+        }
+    });
+    
+    // Final filter to ensure only positive balances are shown
+    const filteredAssets = ownedAssets.filter(asset => asset.balance > 0);
+    
+    const activeStakes = JSON.parse(localStorage.getItem('activeStakes') || '[]').filter(s => s.status === 'active');
+    
+    if (filteredAssets.length > 0) {
+        displayMyAssets(container, filteredAssets);
+        if (activeStakes.length > 0) appendActiveStakesToAssets(container, activeStakes);
+    } else {
+        // If no assets but there are active stakes – show them here
+        if (activeStakes.length > 0) {
+            container.innerHTML = '';
+            appendActiveStakesToAssets(container, activeStakes);
+        } else {
+            showAssetsEmpty(container, 'Нет активных сделок');
+        }
+    }
+}
+
+// Helper function to get coin name by symbol
+function getCoinNameBySymbol(symbol) {
+    const coinNames = {
+        'BTC': 'Bitcoin',
+        'ETH': 'Ethereum',
+        'BNB': 'Binance Coin',
+        'SOL': 'Solana',
+        'ADA': 'Cardano',
+        'XRP': 'Ripple',
+        'DOT': 'Polkadot',
+        'DOGE': 'Dogecoin',
+        'AVAX': 'Avalanche',
+        'LINK': 'Chainlink',
+        'MATIC': 'Polygon',
+        'UNI': 'Uniswap',
+        'LTC': 'Litecoin',
+        'XLM': 'Stellar',
+        'ATOM': 'Cosmos',
+        'XMR': 'Monero',
+        'ALGO': 'Algorand',
+        'VET': 'VeChain',
+        'FIL': 'Filecoin',
+        'ICP': 'Internet Computer',
+        'TRX': 'TRON'
+    };
+    return coinNames[symbol] || symbol;
 }
 
 function displayTopAssets(container, coins) {
@@ -1144,26 +1352,40 @@ function displayMyAssets(container, portfolio) {
         return;
     }
 
-    container.innerHTML = portfolio.map(asset => {
-        const profitLoss = asset.profitLossPercent || 0;
-        const changeClass = profitLoss >= 0 ? 'positive' : 'negative';
-        const changeIcon = profitLoss >= 0 ? 'fa-arrow-up' : 'fa-arrow-down';
+    // Filter out assets with zero or negative balance
+    const filteredPortfolio = portfolio.filter(asset => {
+        const balance = asset.balance || 0;
+        return balance > 0;
+    });
+
+    // If no assets have positive balance, show empty state
+    if (filteredPortfolio.length === 0) {
+        showAssetsEmpty(container, 'Нет активов');
+        return;
+    }
+
+    container.innerHTML = filteredPortfolio.map(asset => {
+        const balance = asset.balance || 0;
+        const coinSymbol = asset.coinSymbol;
         
         return `
-            <div class="asset-item" onclick="openAssetDetails('${asset.coinSymbol}')">
+            <div class="asset-item" onclick="openAssetDetails('${coinSymbol}')">
                 <div class="asset-icon">
-                    <img src="${window.CryptoLogos ? window.CryptoLogos.getCoinLogoBySymbol(asset.coinSymbol) : '/logos/default.svg'}" 
+                    <img src="${window.CryptoLogos ? window.CryptoLogos.getCoinLogoBySymbol(coinSymbol) : '/logos/default.svg'}" 
                          alt="${asset.coinName}" 
                          onerror="this.src='/logos/default.svg'">
                 </div>
                 <div class="asset-info">
-                    <div class="asset-name">${asset.coinName || asset.coinSymbol}</div>
-                    <div class="asset-symbol">${asset.coinSymbol}</div>
-                    <div class="asset-price">${asset.balance ? asset.balance.toFixed(8) : '0'} ${asset.coinSymbol}</div>
+                    <div class="asset-name">${asset.coinName || coinSymbol}</div>
+                    <div class="asset-symbol">${coinSymbol}</div>
+                    <div class="asset-quantity">${balance.toFixed(8)} ${coinSymbol}</div>
                 </div>
-                <div class="asset-change ${changeClass}">
-                    <i class="fas ${changeIcon}"></i>
-                    ${profitLoss >= 0 ? '+' : ''}${profitLoss.toFixed(2)}%
+                <div class="asset-actions">
+                    <span class="available-label">Доступно для продажи</span>
+                    <button class="sell-btn" onclick="event.stopPropagation(); goToSpotTradingWithCoin('${coinSymbol}')">
+                        <i class="fas fa-arrow-down"></i>
+                        Продать
+                    </button>
                 </div>
             </div>
         `;
@@ -1266,6 +1488,19 @@ function switchAssetsView(view) {
 
 function openAssetDetails(assetId) {
     window.location.href = `coininfo.html?coin=${assetId}`;
+}
+
+// Function to navigate to spot trading with specific coin
+function goToSpotTradingWithCoin(coinSymbol) {
+    // Get coin data and set it in localStorage for spot trading
+    const coinsData = JSON.parse(localStorage.getItem('coinsData') || '[]');
+    const coin = coinsData.find(c => c.symbol.toUpperCase() === coinSymbol.toUpperCase());
+    
+    if (coin) {
+        localStorage.setItem('currentCoin', JSON.stringify(coin));
+    }
+    
+    window.location.href = `spot-trading.html?coin=${coinSymbol}`;
 }
 
 // Initialize sections state

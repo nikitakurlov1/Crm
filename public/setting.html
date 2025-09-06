@@ -19,20 +19,12 @@
     
     
     <div class="app-container">
-        <!-- Header -->
-        <header class="header">
-            <div class="header-left">
-                <button class="icon-btn back-btn">
-                    <i class="fas fa-arrow-left"></i>
-                </button>
-                <h1 class="page-title">Настройки</h1>
-            </div>
-            <div class="header-right">
-                <button class="icon-btn">
-                    <i class="fas fa-search"></i>
-                </button>
-            </div>
-        </header>
+        <!-- Back Button -->
+        <div class="back-button-container">
+            <button class="back-btn" onclick="goBack()">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+        </div>
 
         <!-- Main Content -->
         <main class="main-content">
@@ -183,6 +175,10 @@
             <button class="nav-btn" onclick="window.location.href='coins.html'">
                 <i class="fas fa-coins"></i>
                 <span>Монеты</span>
+            </button>
+            <button class="nav-btn" onclick="window.location.href='coininfo.html'">
+                <i class="fas fa-chart-line"></i>
+                <span>Торговля</span>
             </button>
             <button class="nav-btn" onclick="window.location.href='news.html'">
                 <i class="fas fa-newspaper"></i>

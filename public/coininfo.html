@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="coininfo.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Remove Chart.js as we're using custom chart -->
     <script src="logos.js?v=2"></script>
     <script src="api-utils.js?v=2"></script>
     <script src="coin-data.js?v=2"></script>
@@ -23,20 +23,6 @@
     
     
     <div class="app-container">
-        <!-- Header -->
-        <header class="header">
-            <div class="header-left">
-                <button class="icon-btn back-btn" onclick="goBack()">
-                    <i class="fas fa-arrow-left"></i>
-                </button>
-            </div>
-            <div class="header-right">
-                <button class="icon-btn">
-                    <i class="fas fa-star"></i>
-                </button>
-            </div>
-        </header>
-
         <!-- Main Content -->
         <main class="main-content">
             <!-- Unified Bitcoin Card -->
@@ -52,9 +38,10 @@
                             </span>
                         </div>
                     </div>
-                    <div class="coin-info right-aligned">
+                    <div class="coin-info right-aligned" onclick="openCoinSelector()">
                         <div class="coin-details">
                             <h1 class="coin-name">Bitcoin</h1>
+                            <i class="fas fa-chevron-down coin-selector-arrow"></i>
                         </div>
                         <div class="coin-icon">
                             <img src="/logos/bitcoin.svg" alt="BTC" class="coin-logo" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;" onerror="this.src='/logos/default.svg'">
@@ -65,35 +52,131 @@
                 <!-- Chart Section -->
                 <div class="chart-section">
                     <div class="chart-container">
-                        <canvas id="priceChart" width="680" height="332" style="display: block; box-sizing: border-box; height: 166px; width: 100%;"></canvas>
+                        <div id="customChart" class="custom-chart">
+                            <canvas id="chartCanvas" class="chart-canvas"></canvas>
+                            <div class="chart-crosshair" id="chartCrosshair"></div>
+                            <div class="chart-tooltip" id="chartTooltip"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Chart Info Bottom Bar -->
+                    <div class="chart-info-bar">
+                        <div class="chart-info-item">
+                            <span class="info-label">Interval</span>
+                            <span class="info-value" id="chartInterval">1h</span>
+                        </div>
+                        <div class="chart-info-item">
+                            <span class="info-label">Time Window</span>
+                            <span class="info-value" id="timeWindow">1 hour</span>
+                        </div>
+                        <div class="chart-info-item">
+                            <span class="info-label">Data Source</span>
+                            <span class="info-value" id="dataPoints">Real DB</span>
+                        </div>
                     </div>
                 </div>
             </section>
 
             
 
-            <!-- Staking Button -->
-            <section class="action-section">
-                <div class="staking-button-container">
-                    <button class="staking-btn" onclick="openStakeModal()">
-                        <div class="staking-btn-content">
+            <!-- Market Statistics Section -->
+            <section class="market-stats-section">
+                <div class="section-header">
+                    <h2>Рыночная статистика</h2>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-label">Максимальная цена</div>
+                        <div class="stat-value" id="maxPrice">Загрузка...</div>
+                        <div class="stat-sublabel">За все время</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Рыночная капитализация</div>
+                        <div class="stat-value" id="marketCap">Загрузка...</div>
+                        <div class="stat-sublabel">USD</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Объем торгов</div>
+                        <div class="stat-value" id="volume24h">Загрузка...</div>
+                        <div class="stat-sublabel">24 часа</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Циркулирующий объем</div>
+                        <div class="stat-value" id="circulatingSupply">Загрузка...</div>
+                        <div class="stat-sublabel" id="coinSymbolSupply">Монет</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Price Analysis Section -->
+            <section class="price-analysis-section">
+                <div class="section-header">
+                    <h2>Анализ цены</h2>
+                </div>
+                <div class="analysis-grid">
+                    <div class="analysis-card">
+                        <div class="analysis-header">
                             <i class="fas fa-chart-line"></i>
-                            <div class="staking-btn-text">
-                                <span class="staking-title">Бинарный опцион</span>
-                                <span class="staking-subtitle">Сделка на рост/падение</span>
+                            <span>Изменения за периоды</span>
+                        </div>
+                        <div class="analysis-content">
+                            <div class="period-change">
+                                <span class="period">1 час</span>
+                                <span class="change" id="change1h">Загрузка...</span>
+                            </div>
+                            <div class="period-change">
+                                <span class="period">24 часа</span>
+                                <span class="change" id="change24h">Загрузка...</span>
+                            </div>
+                            <div class="period-change">
+                                <span class="period">7 дней</span>
+                                <span class="change" id="change7d">Загрузка...</span>
+                            </div>
+                            <div class="period-change">
+                                <span class="period">30 дней</span>
+                                <span class="change" id="change30d">Загрузка...</span>
                             </div>
                         </div>
-                        <div class="staking-btn-arrow">
-                            <i class="fas fa-chevron-right"></i>
+                    </div>
+                    
+                    <div class="analysis-card">
+                        <div class="analysis-header">
+                            <i class="fas fa-chart-bar"></i>
+                            <span>Торговая информация</span>
                         </div>
-                    </button>
+                        <div class="analysis-content">
+                            <div class="trade-info-item">
+                                <span class="label">Минимум 24ч</span>
+                                <span class="value" id="low24h">Загрузка...</span>
+                            </div>
+                            <div class="trade-info-item">
+                                <span class="label">Максимум 24ч</span>
+                                <span class="value" id="high24h">Загрузка...</span>
+                            </div>
+                            <div class="trade-info-item">
+                                <span class="label">Средняя цена</span>
+                                <span class="value" id="avgPrice">Загрузка...</span>
+                            </div>
+                            <div class="trade-info-item">
+                                <span class="label">Волатильность</span>
+                                <span class="value" id="volatility">Загрузка...</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="active-stakes-link">
-                    <button class="active-stakes-btn" onclick="openActiveStakesModal()">
-                        <span class="dot" aria-hidden="true"></span>
-                        <span>Активные сделки</span>
-                        <span class="stakes-count" id="stakesCount">0</span>
-                    </button>
+            </section>
+
+            <!-- Assets Section -->
+            <section class="assets-section">
+                <div class="section-header">
+                    <div class="assets-toggle">
+                        <button class="toggle-btn active" id="myAssetsBtn" onclick="switchAssetsView('my')">
+                            Мои сделки
+                        </button>
+                    </div>
+                </div>
+                <div class="assets-list" id="assetsList">
+                    <!-- Dynamic content will be loaded here -->
                 </div>
             </section>
 
@@ -117,9 +200,13 @@
                 <i class="fas fa-home"></i>
                 <span>Главная</span>
             </button>
-                            <button class="nav-btn active" onclick="window.location.href='coins.html'">
+                            <button class="nav-btn" onclick="window.location.href='coins.html'">
                 <i class="fas fa-coins"></i>
                 <span>Монеты</span>
+            </button>
+            <button class="nav-btn active">
+                <i class="fas fa-chart-line"></i>
+                <span>Торговля</span>
             </button>
             <button class="nav-btn" onclick="window.location.href='news.html'">
                 <i class="fas fa-newspaper"></i>
@@ -131,14 +218,35 @@
                 <span>Настройки</span>
             </button>
         </nav>
+        
+        <!-- Floating Trade Buttons -->
+        <div class="floating-trade-panel">
+            <div class="trade-buttons-floating">
+                <button class="trade-btn-floating buy-btn" onclick="goToSpotTrading()">
+                    <div class="btn-content">
+                        <i class="fas fa-chart-line"></i>
+                        <span>Спот</span>
+                        <div class="active-trades-indicator" id="activeTradesIndicator" style="display: none;">
+                            <span class="indicator-count" id="activeTradesCount">0</span>
+                        </div>
+                    </div>
+                </button>
+                <button class="trade-btn-floating futures-btn" onclick="openFuturesModal()">
+                    <div class="btn-content">
+                        <i class="fas fa-chart-bar"></i>
+                        <span>Фьючерсы</span>
+                    </div>
+                </button>
+            </div>
+        </div>
     </div>
 
-    <!-- Staking Modal -->
-    <div class="modal" id="stakeModal" style="display: none;">
-        <div class="modal-content">
+    <!-- Futures Trading Modal -->
+    <div class="modal" id="futuresModal" style="display: none;">
+        <div class="modal-content futures-modal">
             <div class="modal-header">
-                <h3 id="stakeModalTitle">Бинарный опцион — Сделка на рост</h3>
-                <button class="icon-btn" onclick="closeModal('stakeModal')">
+                <h3 id="futuresModalTitle">Фьючерсная торговля — Long/Short</h3>
+                <button class="icon-btn" onclick="closeModal('futuresModal')">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
@@ -157,79 +265,155 @@
 
                 <!-- Direction Selection -->
                 <div class="direction-section">
-                    <label class="section-label">Выберите направление:</label>
+                    <label class="section-label">Выберите направление позиции:</label>
                     <div class="direction-buttons">
-                        <button type="button" class="direction-btn active" data-direction="up" onclick="selectDirection('up')">
+                        <button type="button" class="direction-btn long-btn active" data-direction="up" onclick="selectFuturesDirection('up')">
                             <i class="fas fa-arrow-up"></i>
                             <span>Long</span>
                         </button>
-                        <button type="button" class="direction-btn" data-direction="down" onclick="selectDirection('down')">
+                        <button type="button" class="direction-btn short-btn" data-direction="down" onclick="selectFuturesDirection('down')">
                             <i class="fas fa-arrow-down"></i>
                             <span>Short</span>
                         </button>
                     </div>
                 </div>
 
-                <form id="stakeForm">
+                <!-- Leverage Selection -->
+                <div class="leverage-section">
+                    <label class="section-label">Кредитное плечо:</label>
+                    <div class="leverage-slider-container">
+                        <input type="range" id="leverageSlider" class="leverage-slider" min="0" max="4" value="1" step="1">
+                        <div class="leverage-labels">
+                            <div class="leverage-label" data-value="0">x2</div>
+                            <div class="leverage-label" data-value="1">x3</div>
+                            <div class="leverage-label" data-value="2">x5</div>
+                            <div class="leverage-label" data-value="3">x8</div>
+                            <div class="leverage-label" data-value="4">x10</div>
+                        </div>
+                    </div>
+                    <div class="current-leverage-display">
+                        <div class="current-leverage-value" id="currentLeverageValue">x3</div>
+                        <div class="current-leverage-desc">Текущее плечо</div>
+                    </div>
+                    <input type="hidden" id="currentLeverage" value="3">
+                </div>
+
+                <form id="futuresForm">
                     <div class="amount-input-container">
-                        <label class="amount-label">Сумма сделки (USD)</label>
-                        <input type="number" id="stakeAmount" class="amount-input" placeholder="10.00" min="10" step="0.01" required>
+                        <label class="amount-label">Размер позиции (USD)</label>
+                        <input type="number" id="futuresAmount" class="amount-input" placeholder="10.00" min="10" step="0.01" required>
                     </div>
                     
-                    <div class="form-group">
-                        <label>Время сделки</label>
-                        <div class="time-selector">
-                            <div class="time-slider-container">
-                                <input type="range" id="timeSlider" class="time-slider" min="0" max="5" value="0" step="1">
-                                <div class="time-labels">
-                                    <div class="time-label" data-value="0">5 мин</div>
-                                    <div class="time-label" data-value="1">1 час</div>
-                                    <div class="time-label" data-value="2">3 часа</div>
-                                    <div class="time-label" data-value="3">6 часов</div>
-                                    <div class="time-label" data-value="4">12 часов</div>
-                                    <div class="time-label" data-value="5">24 часа</div>
-                                </div>
-                            </div>
-                            <div class="current-time-display">
-                                <div class="current-time-value" id="currentTimeValue">5</div>
-                                <div class="current-time-unit" id="currentTimeUnit">минут</div>
-                            </div>
-                        </div>
-                        <input type="hidden" id="stakeTime" value="0.083">
-                    </div>
-
                     <!-- Potential Results -->
                     <div class="potential-results">
                         <div class="result-item">
-                            <span class="result-label">При победе:</span>
+                            <span class="result-label">Торговый объем:</span>
+                            <span class="result-value" id="tradingVolume">$0.00</span>
+                        </div>
+                        <div class="result-item">
+                            <span class="result-label">При изменении на +1%:</span>
                             <span class="result-value positive" id="potentialWin">$0.00</span>
                         </div>
                         <div class="result-item">
-                            <span class="result-label">При проигрыше:</span>
+                            <span class="result-label">При изменении на -1%:</span>
                             <span class="result-value negative" id="potentialLoss">$0.00</span>
+                        </div>
+                        <div class="result-item">
+                            <span class="result-label">Ликвидация при:</span>
+                            <span class="result-value warning" id="liquidationPrice">$0.00</span>
                         </div>
                     </div>
 
-
-
-                    <button type="submit" class="trade-btn primary" id="stakeSubmitBtn">Создать сделку на рост</button>
+                    <button type="submit" class="trade-btn primary futures-submit-btn" id="futuresSubmitBtn">Открыть Long позицию</button>
                 </form>
             </div>
         </div>
     </div>
 
-    <!-- Active Stakes Modal -->
+    <!-- Active Futures Positions Modal -->
     <div class="modal" id="activeStakesModal" style="display: none;">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>Активные сделки</h3>
+                <h3>Активные позиции</h3>
                 <button class="icon-btn" onclick="closeModal('activeStakesModal')">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
             <div class="modal-body">
                 <div id="activeStakesList">
-                    <!-- Active stakes will be populated here -->
+                    <!-- Active positions will be populated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Close Position Modal -->
+    <div class="modal" id="closePositionModal" style="display: none;">
+        <div class="modal-content close-position-modal">
+            <div class="modal-header">
+                <h3 id="closePositionTitle">Закрыть позицию</h3>
+                <button class="icon-btn" onclick="closeModal('closePositionModal')">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="position-details">
+                    <div class="position-info">
+                        <div class="position-item">
+                            <span class="position-label">Направление:</span>
+                            <span class="position-value" id="positionDirection">Long</span>
+                        </div>
+                        <div class="position-item">
+                            <span class="position-label">Размер позиции:</span>
+                            <span class="position-value" id="positionSize">$0.00</span>
+                        </div>
+                        <div class="position-item">
+                            <span class="position-label">Плечо:</span>
+                            <span class="position-value" id="positionLeverage">x3</span>
+                        </div>
+                        <div class="position-item">
+                            <span class="position-label">Цена открытия:</span>
+                            <span class="position-value" id="openPrice">$0.00</span>
+                        </div>
+                        <div class="position-item">
+                            <span class="position-label">Текущая цена:</span>
+                            <span class="position-value" id="currentMarketPrice">$0.00</span>
+                        </div>
+                        <div class="position-item pnl-item">
+                            <span class="position-label">PnL:</span>
+                            <span class="position-value" id="positionPnL">$0.00</span>
+                        </div>
+                    </div>
+                    
+                    <div class="close-position-actions">
+                        <button class="close-position-btn danger" onclick="confirmClosePosition()" id="closePositionBtn">
+                            <i class="fas fa-times-circle"></i>
+                            Закрыть позицию
+                        </button>
+                        <button class="close-position-btn secondary" onclick="closeModal('closePositionModal')">
+                            <i class="fas fa-arrow-left"></i>
+                            Отмена
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Coin Selector Modal -->
+    <div class="coin-selector-modal" id="coinSelectorModal" style="display: none;">
+        <div class="coin-selector-backdrop" onclick="closeModal('coinSelectorModal')"></div>
+        <div class="coin-selector-sheet">
+            <div class="modal-header">
+                <h3>Выбор монеты</h3>
+                <button class="icon-btn" onclick="closeModal('coinSelectorModal')">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <!-- All Coins List -->
+                <div class="coins-selector-list" id="coinsSelectorList">
+                    <!-- All coins will be loaded here -->
                 </div>
             </div>
         </div>

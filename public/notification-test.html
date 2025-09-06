@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Notifications - SellBit Exchange</title>
+    <link rel="stylesheet" href="notification-system.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+        .test-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        .btn {
+            padding: 12px 20px;
+            margin: 8px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .btn-success { background: #00C853; color: white; }
+        .btn-error { background: #FF453A; color: white; }
+        .btn-warning { background: #FF9500; color: white; }
+        .btn-info { background: #007AFF; color: white; }
+        .btn:hover { transform: translateY(-1px); }
+        h2 { color: #1a1a1a; margin-bottom: 20px; }
+        p { color: #666; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h2>🪼 Система уведомлений SellBit</h2>
+        <p>Тестирование улучшенной системы уведомлений для биржи. Максимум 2 уведомления одновременно, компактный дизайн.</p>
+        
+        <button class="btn btn-success" onclick="testSuccess()">Успешная операция</button>
+        <button class="btn btn-error" onclick="testError()">Ошибка</button>
+        <button class="btn btn-warning" onclick="testWarning()">Предупреждение</button>
+        <button class="btn btn-info" onclick="testInfo()">Информация</button>
+        
+        <br><br>
+        <button class="btn btn-info" onclick="testMultiple()">Показать несколько (тест лимита 2)</button>
+        <button class="btn btn-warning" onclick="closeAll()">Закрыть все</button>
+    </div>
+
+    <script src="notification-manager.js"></script>
+    <script>
+        function testSuccess() {
+            window.notificationManager.success('Торговая операция выполнена');
+        }
+        
+        function testError() {
+            window.notificationManager.error('Недостаточно средств');
+        }
+        
+        function testWarning() {
+            window.notificationManager.warning('Высокая волатильность рынка');
+        }
+        
+        function testInfo() {
+            window.notificationManager.info('Новое обновление доступно');
+        }
+        
+        function testMultiple() {
+            window.notificationManager.success('Первое уведомление');
+            setTimeout(() => {
+                window.notificationManager.info('Второе уведомление');
+            }, 500);
+            setTimeout(() => {
+                window.notificationManager.warning('Третье уведомление (должно заменить первое)');
+            }, 1000);
+        }
+        
+        function closeAll() {
+            window.notificationManager.closeAll();
+        }
+    </script>
+</body>
+</html>

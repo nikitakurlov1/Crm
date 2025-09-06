@@ -1,4 +1,8 @@
 // Settings Page JavaScript
+// Global function for back button
+function goBack() {
+    window.history.back();
+}
 
 class SettingsPage {
     constructor() {

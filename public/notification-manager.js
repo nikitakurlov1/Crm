@@ -64,24 +64,19 @@ class NotificationManager {
      */
     show(message, type = 'info', options = {}) {
         const {
-            title = this.getDefaultTitle(type),
+            title = null, // Не используем заголовок по умолчанию
             duration = this.getDefaultDuration(type),
             closable = true,
-            actions = null,
-            progress = null,
             id = null
         } = options;
 
         // Ограничиваем количество одновременно видимых уведомлений (максимум 2)
-        const existingNotifications = Array.from(this.container.querySelectorAll('.notification'));
-        if (existingNotifications.length >= 2) {
-            const oldest = existingNotifications[0];
-            const oldestId = oldest && oldest.dataset ? oldest.dataset.id : null;
-            if (oldestId && this.notifications.has(oldestId)) {
-                this.close(oldestId);
-            } else if (oldest && oldest.parentNode) {
-                // На случай несоответствия, удаляем напрямую
-                oldest.parentNode.removeChild(oldest);
+        while (this.container.children.length >= 2) {
+            const oldest = this.container.children[0];
+            if (oldest && oldest.dataset && oldest.dataset.id) {
+                this.close(oldest.dataset.id);
+            } else {
+                oldest.remove();
             }
         }
 
@@ -92,8 +87,6 @@ class NotificationManager {
             message,
             type,
             closable,
-            actions,
-            progress,
             duration
         });
 
@@ -116,7 +109,7 @@ class NotificationManager {
     /**
      * Создание элемента уведомления
      */
-    createNotification({ id, title, message, type, closable, actions, progress, duration = 0 }) {
+    createNotification({ id, title, message, type, closable, duration = 0 }) {
         const notification = document.createElement('div');
         notification.className = `notification ${type}`;
         notification.dataset.id = id;
@@ -124,19 +117,19 @@ class NotificationManager {
         // Иконка
         const icon = this.getIcon(type);
 
-        // HTML структура
+        // HTML структура - упрощенная для биржи
+        const titleElement = title ? `<div class="notification-title">${title}</div>` : '';
+        
         notification.innerHTML = `
             <div class="notification-content">
                 <div class="notification-icon">
                     <i class="fas fa-${icon}"></i>
                 </div>
                 <div class="notification-text">
-                    <div class="notification-title">${title}</div>
+                    ${titleElement}
                     <div class="notification-message">${message}</div>
-                    ${actions ? this.createActionsHTML(actions) : ''}
-                    ${progress ? this.createProgressHTML(progress) : ''}
                 </div>
-                ${closable ? '<button class="notification-close" onclick="window.notificationManager.close(\'' + id + '\')"><i class="fas fa-times"></i></button>' : ''}
+                ${closable ? '<button class="notification-close" onclick="window.notificationManager.close(\'' + id + '\');"><i class="fas fa-times"></i></button>' : ''}
             </div>
             ${duration > 0 ? '<div class="notification-progress"><div class="notification-progress-bar" style="width: 100%; animation-duration: ' + duration + 'ms;"></div></div>' : ''}
         `;
@@ -145,31 +138,6 @@ class NotificationManager {
         this.notifications.set(id, notification);
 
         return notification;
-    }
-
-    /**
-     * Создание HTML для действий
-     */
-    createActionsHTML(actions) {
-        const actionsHTML = actions.map(action => 
-            `<button class="btn-${action.type || 'secondary'}" onclick="${action.onclick}">${action.text}</button>`
-        ).join('');
-        
-        return `<div class="notification-action">${actionsHTML}</div>`;
-    }
-
-    /**
-     * Создание HTML для прогресса
-     */
-    createProgressHTML(progress) {
-        return `
-            <div class="notification-progress-container">
-                <div class="notification-progress-text">${progress.text || ''}</div>
-                <div class="notification-progress-bar-container">
-                    <div class="notification-progress-bar-fill" style="width: ${progress.value || 0}%"></div>
-                </div>
-            </div>
-        `;
     }
 
     /**
@@ -265,15 +233,15 @@ class NotificationManager {
      */
     getDefaultDuration(type) {
         const durations = {
-            success: 3000,
-            error: 5000,
-            warning: 4000,
-            info: 3000,
-            sync: 2000,
-            connection: 3000,
+            success: 2000,  // Короче для биржи
+            error: 4000,
+            warning: 3000,
+            info: 2000,
+            sync: 1500,
+            connection: 2000,
             loading: 0 // Не закрывается автоматически
         };
-        return durations[type] || 3000;
+        return durations[type] || 2000;
     }
 
     /**
@@ -298,7 +266,7 @@ class NotificationManager {
      * Уведомление об ошибке
      */
     error(message, options = {}) {
-        return this.show(message, 'error', { ...options, duration: 5000 });
+        return this.show(message, 'error', { ...options, duration: 4000 });
     }
 
     /**

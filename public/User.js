@@ -556,7 +556,8 @@ function handleLogout() {
     localStorage.removeItem('authToken');
     localStorage.removeItem('user');
     
-    showNotification('Информация', 'Вы вышли из аккаунта', 'info');
+    // Remove unnecessary logout notification
+    // showNotification('Информация', 'Вы вышли из аккаунта', 'info');
     window.location.href = '/';
 }
 
@@ -565,7 +566,8 @@ function viewUser(userId) {
     const user = users.find(u => u.id === userId);
     if (user) {
         // Show user details in a modal or redirect to user detail page
-        showNotification('Информация', `Просмотр пользователя: ${user.username}`, 'info');
+        // Remove unnecessary view notification  
+        // showNotification('Информация', `Просмотр пользователя: ${user.username}`, 'info');
     }
 }
 

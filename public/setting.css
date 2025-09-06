@@ -25,6 +25,36 @@ body {
     width: 100%;
 }
 
+/* Back Button Container */
+.back-button-container {
+    padding: 16px 20px 0 20px;
+    background: #ffffff;
+}
+
+.back-btn {
+    background: transparent;
+    border: none;
+    color: #4A88FF;
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    font-size: 18px;
+}
+
+.back-btn:hover {
+    background: rgba(74, 136, 255, 0.08);
+}
+
+.back-btn:active {
+    background: rgba(74, 136, 255, 0.15);
+    transform: scale(0.95);
+}
+
 /* Header */
 .header {
     display: flex;
@@ -85,6 +115,7 @@ body {
     max-width: 100%;
     overflow-x: hidden;
     box-sizing: border-box;
+    padding-top: 0;
 }
 
 /* Settings Sections */
