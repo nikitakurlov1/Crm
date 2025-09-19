@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, minimum-scale=1.0">
+    <title>Фьючерсная торговля - SellBit</title>
+    <link rel="icon" type="image/svg+xml" href="sellbit-logo-icon.svg">
+    <link rel="apple-touch-icon" href="sellbit-logo-main.jpg">
+    <meta name="theme-color" content="#0a192f">
+    <meta name="msapplication-TileColor" content="#0a192f">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="SellBit">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="SellBit">
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="spot-trading.css">
+    <link rel="stylesheet" href="bottom-nav.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="logos.js"></script>
+    <script src="api-utils.js"></script>
+    <script src="pwa-register.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-left">
+                <button class="icon-btn back-btn lime-green" onclick="goBack()">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+                <h1 class="page-title">Фьючерсная торговля</h1>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Trading Pair Selection -->
+            <section class="pair-selection">
+                <div class="selected-pair">
+                    <div class="pair-info">
+                        <div class="pair-icon">
+                            <img src="/logos/bitcoin.svg" alt="BTC" id="selectedCoinIcon" onerror="this.src='/logos/default.svg'">
+                        </div>
+                        <div class="pair-details">
+                            <div class="pair-name" id="selectedCoinName">Bitcoin</div>
+                            <div class="pair-symbol" id="selectedCoinSymbol">BTC/USD</div>
+                        </div>
+                    </div>
+                    <div class="pair-price">
+                        <div class="current-price" id="currentPrice">$67,543.21</div>
+                        <div class="price-change positive" id="priceChange">
+                            <i class="fas fa-arrow-up"></i>
+                            +2.45%
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Simplified Balance Section -->
+            <section class="balance-section">
+                <div class="balance-card compact">
+                    <div class="balance-header">
+                        <span class="balance-label">Доступно</span>
+                    </div>
+                    <div class="balance-amount" id="accountBalance">$38.33</div>
+                </div>
+            </section>
+
+            <!-- Futures Trading Interface -->
+            <section class="trading-interface">
+                <!-- Account Balance Display -->
+                <div class="balance-display">
+                    <div class="balance-item">
+                        <span class="balance-label">Баланс аккаунта:</span>
+                        <span class="balance-value" id="accountBalanceDisplay">$38.33</span>
+                    </div>
+                    <div class="balance-item">
+                        <span class="balance-label">Текущая цена:</span>
+                        <span class="balance-value" id="currentPriceDisplay">$115516.00</span>
+                    </div>
+                </div>
+
+                <!-- Direction Selection -->
+                <div class="direction-section">
+                    <label class="section-label">Выберите направление позиции:</label>
+                    <div class="direction-buttons">
+                        <button type="button" class="direction-btn long-btn active" data-direction="up" onclick="selectFuturesDirection('up')">
+                            <i class="fas fa-arrow-up"></i>
+                            <span>Long</span>
+                        </button>
+                        <button type="button" class="direction-btn short-btn" data-direction="down" onclick="selectFuturesDirection('down')">
+                            <i class="fas fa-arrow-down"></i>
+                            <span>Short</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Leverage Selection -->
+                <div class="leverage-section">
+                    <label class="section-label">Кредитное плечо:</label>
+                    <div class="leverage-slider-container">
+                        <input type="range" id="leverageSlider" class="leverage-slider" min="0" max="4" value="1" step="1">
+                        <div class="leverage-labels">
+                            <div class="leverage-label" data-value="0">x2</div>
+                            <div class="leverage-label active" data-value="1">x3</div>
+                            <div class="leverage-label" data-value="2">x5</div>
+                            <div class="leverage-label" data-value="3">x8</div>
+                            <div class="leverage-label" data-value="4">x10</div>
+                        </div>
+                    </div>
+                    <div class="current-leverage-display">
+                        <div class="current-leverage-value" id="currentLeverageValue">x3</div>
+                        <div class="current-leverage-desc">Текущее плечо</div>
+                    </div>
+                    <input type="hidden" id="currentLeverage" value="3">
+                </div>
+
+                <form id="futuresForm">
+                    <div class="amount-input-container">
+                        <label class="amount-label">Размер позиции (USD)</label>
+                        <div class="input-container">
+                            <input type="number" id="futuresAmount" class="trade-input" placeholder="10.00" min="10" step="0.01" required>
+                            <span class="input-suffix">USD</span>
+                        </div>
+                        <div class="percentage-buttons">
+                            <button class="percentage-btn" onclick="setPercentage(25)">25%</button>
+                            <button class="percentage-btn" onclick="setPercentage(50)">50%</button>
+                            <button class="percentage-btn" onclick="setPercentage(75)">75%</button>
+                            <button class="percentage-btn" onclick="setPercentage(100)">100%</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Fees and Funding Rate -->
+                    <div class="fees-funding-info">
+                        <div class="info-item">
+                            <span class="info-label">Комиссия:</span>
+                            <span class="info-value" id="tradingFee">0.02%</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Funding rate:</span>
+                            <span class="info-value" id="fundingRate">+0.01% / 8h</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Potential Results -->
+                    <div class="potential-results">
+                        <div class="result-item">
+                            <span class="result-label">Торговый объем:</span>
+                            <span class="result-value" id="tradingVolume">$0.00</span>
+                        </div>
+                        <div class="result-item">
+                            <span class="result-label">При изменении на +1%:</span>
+                            <span class="result-value positive" id="potentialWin">+$0.00 (+0.00%)</span>
+                        </div>
+                        <div class="result-item">
+                            <span class="result-label">При изменении на -1%:</span>
+                            <span class="result-value negative" id="potentialLoss">-$0.00 (-0.00%)</span>
+                        </div>
+                        <div class="result-item">
+                            <span class="result-label">Ликвидация при:</span>
+                            <span class="result-value warning" id="liquidationPrice">$0.00</span>
+                        </div>
+                    </div>
+
+                    <!-- Stop Loss / Take Profit -->
+                    <div class="sl-tp-section">
+                        <div class="sl-tp-inputs">
+                            <div class="input-group">
+                                <label class="input-label">Stop-Loss (USD)</label>
+                                <div class="input-container">
+                                    <input type="number" id="stopLoss" class="trade-input" placeholder="Установить уровень" step="0.01">
+                                    <span class="input-suffix">USD</span>
+                                </div>
+                            </div>
+                            <div class="input-group">
+                                <label class="input-label">Take-Profit (USD)</label>
+                                <div class="input-container">
+                                    <input type="number" id="takeProfit" class="trade-input" placeholder="Установить уровень" step="0.01">
+                                    <span class="input-suffix">USD</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="trade-btn primary futures-submit-btn long-btn" id="futuresSubmitBtn">Открыть Long позицию</button>
+                </form>
+            </section>
+
+            <!-- Active Positions -->
+            <section class="recent-orders">
+                <div class="section-header">
+                    <h3>Активные позиции</h3>
+                    <div class="positions-tabs">
+                        <button class="tab-btn active" onclick="switchPositionsTab('open')">Открытые</button>
+                        <button class="tab-btn" onclick="switchPositionsTab('closed')">Закрытые</button>
+                        <button class="tab-btn" onclick="switchPositionsTab('history')">История</button>
+                    </div>
+                </div>
+                <div class="orders-list" id="activePositionsList">
+                    <div class="order-item">
+                        <div class="order-left">
+                            <div class="order-pair">BTC/USD</div>
+                            <div class="order-details">
+                                <span class="order-type buy">Long</span>
+                                <span class="order-time">x3 плечо</span>
+                            </div>
+                        </div>
+                        <div class="order-right">
+                            <div class="order-amount">Маржа: $50.00</div>
+                            <div class="order-total positive">PnL: +$12.50 (+25%)</div>
+                        </div>
+                    </div>
+                    <div class="order-item">
+                        <div class="order-left">
+                            <div class="order-pair">ETH/USD</div>
+                            <div class="order-details">
+                                <span class="order-type sell">Short</span>
+                                <span class="order-time">x5 плечо</span>
+                            </div>
+                        </div>
+                        <div class="order-right">
+                            <div class="order-amount">Маржа: $30.00</div>
+                            <div class="order-total negative">PnL: -$5.20 (-17.33%)</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Bottom Navigation -->
+        <nav class="bottom-nav">
+            <button class="nav-btn" onclick="window.location.href='home.html'">
+                <i class="fas fa-home"></i>
+                <span>Главная</span>
+            </button>
+            <button class="nav-btn" onclick="window.location.href='coins.html'">
+                <i class="fas fa-coins"></i>
+                <span>Монеты</span>
+            </button>
+            <button class="nav-btn" onclick="window.location.href='coininfo.html'">
+                <i class="fas fa-chart-line"></i>
+                <span>Торговля</span>
+            </button>
+            <button class="nav-btn" onclick="window.location.href='setting.html'">
+                <i class="fas fa-cog"></i>
+                <span>Настройки</span>
+            </button>
+        </nav>
+    </div>
+
+    <!-- Success Modal -->
+    <div class="modal" id="successModal" style="display: none;">
+        <div class="modal-content success-modal">
+            <div class="success-icon">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            <h3 id="successTitle">Позиция открыта!</h3>
+            <p id="successMessage">Ваша фьючерсная позиция успешно открыта</p>
+            <div class="success-details" id="successDetails">
+                <!-- Position details will be shown here -->
+            </div>
+            <button class="trade-execute-btn" onclick="closeSuccessModal()">
+                Продолжить торговлю
+            </button>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="notification-manager.js"></script>
+    <script src="futures-trading.js"></script>
+</body>
+</html>

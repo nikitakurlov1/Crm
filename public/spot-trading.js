@@ -32,6 +32,7 @@ class SpotTrading {
         // Load real user balance
         this.balance = this.loadUserBalance();
         this.portfolio = [];
+        this.reservedFunds = {}; // For tracking reserved funds for limit orders
         this.orderHistory = [];
         this.fees = {
             maker: 0.001, // 0.1%
@@ -315,12 +316,21 @@ class SpotTrading {
         if (savedHistory) {
             this.orderHistory = JSON.parse(savedHistory);
         }
+
+        // Load reserved funds
+        const savedReservedFunds = localStorage.getItem('spotReservedFunds');
+        if (savedReservedFunds) {
+            this.reservedFunds = JSON.parse(savedReservedFunds);
+        } else {
+            this.reservedFunds = {};
+        }
     }
 
     saveUserData() {
         localStorage.setItem('spotBalance', JSON.stringify(this.balance));
         localStorage.setItem('spotPortfolio', JSON.stringify(this.portfolio));
         localStorage.setItem('spotOrderHistory', JSON.stringify(this.orderHistory));
+        localStorage.setItem('spotReservedFunds', JSON.stringify(this.reservedFunds));
     }
 
     syncWithMainBalance() {
@@ -442,8 +452,31 @@ class SpotTrading {
             this.loadPairData().then(() => {
                 this.updatePriceDisplay();
                 this.calculateTotal();
+                // Check if any limit orders can be executed
+                this.checkLimitOrders();
             });
         }, 5000);
+    }
+
+    checkLimitOrders() {
+        // Check if any open limit orders can be executed based on current price
+        let executedOrders = false;
+        
+        this.orderHistory.forEach(order => {
+            if (order.status === 'open' && order.orderType === 'limit') {
+                const canExecute = this.canExecuteLimitOrder(order);
+                if (canExecute) {
+                    this.executeLimitOrder(order);
+                    executedOrders = true;
+                    this.showNotification(`Лимитный ордер ${order.side === 'buy' ? 'покупки' : 'продажи'} выполнен по цене ${this.formatPrice(order.price)}`, 'success');
+                }
+            }
+        });
+        
+        // Update display if any orders were executed
+        if (executedOrders) {
+            this.updateDisplay();
+        }
     }
 
     updateDisplay() {
@@ -520,17 +553,11 @@ class SpotTrading {
 
     updateBalanceDisplay() {
         const accountBalanceElement = document.getElementById('accountBalance');
-        const portfolioTotalElement = document.getElementById('portfolioTotal');
         const portfolioAssetsElement = document.getElementById('portfolioAssets');
         
         if (accountBalanceElement) {
             const totalBalance = this.balance[this.currentPair.quote] || 0;
             accountBalanceElement.textContent = this.formatPrice(totalBalance);
-        }
-        
-        if (portfolioTotalElement) {
-            const portfolioValue = this.calculatePortfolioValue();
-            portfolioTotalElement.textContent = this.formatPrice(portfolioValue);
         }
         
         if (portfolioAssetsElement) {
@@ -549,44 +576,39 @@ class SpotTrading {
     updatePortfolioAssets(container) {
         if (!container) return;
         
-        // Get all owned cryptocurrencies (excluding USDT) with positive balances
-        const ownedAssets = Object.entries(this.balance)
-            .filter(([symbol, amount]) => symbol !== 'USDT' && amount > 0)
-            .map(([symbol, amount]) => ({ symbol, amount }));
+        // Show only the current trading asset
+        const currentAssetSymbol = this.currentPair.base;
+        const currentAssetAmount = this.balance[currentAssetSymbol] || 0;
         
-        if (ownedAssets.length === 0) {
-            container.innerHTML = `
-                <div class="portfolio-empty">
-                    <i class="fas fa-wallet"></i>
-                    <p>Нет криптовалют</p>
-                    <span>Купите криптовалюту для торговли</span>
-                </div>
-            `;
-            return;
-        }
-        
-        container.innerHTML = ownedAssets.map(asset => {
-            const currentPrice = asset.symbol === this.currentPair.base ? this.currentPrice : 1;
-            const usdValue = asset.amount * currentPrice;
+        // Only show if we have a positive balance of the current asset
+        if (currentAssetAmount > 0) {
+            const usdValue = currentAssetAmount * this.currentPrice;
             
-            return `
+            container.innerHTML = `
                 <div class="portfolio-asset">
                     <div class="asset-icon">
-                        <img src="${window.CryptoLogos ? window.CryptoLogos.getCoinLogoBySymbol(asset.symbol) : '/logos/default.svg'}" 
-                             alt="${asset.symbol}" 
+                        <img src="${window.CryptoLogos ? window.CryptoLogos.getCoinLogoBySymbol(currentAssetSymbol) : '/logos/default.svg'}" 
+                             alt="${currentAssetSymbol}" 
                              onerror="this.src='/logos/default.svg'">
                     </div>
                     <div class="asset-info">
-                        <div class="asset-symbol">${asset.symbol}</div>
-                        <div class="asset-amount">${this.formatAmount(asset.amount)} ${asset.symbol}</div>
+                        <div class="asset-symbol">${currentAssetSymbol}</div>
+                        <div class="asset-amount">${this.formatAmount(currentAssetAmount)} ${currentAssetSymbol}</div>
                     </div>
                     <div class="asset-value">
                         <div class="usd-value">${this.formatPrice(usdValue)}</div>
-                        <div class="available-label">Доступно для продажи</div>
                     </div>
                 </div>
             `;
-        }).join('');
+        } else {
+            container.innerHTML = `
+                <div class="portfolio-empty">
+                    <i class="fas fa-wallet"></i>
+                    <p>Вы не владеете этим активом</p>
+                    <span>Купите криптовалюту для торговли</span>
+                </div>
+            `;
+        }
     }
 
     updateOrderHistoryDisplay() {
@@ -608,19 +630,40 @@ class SpotTrading {
         }
         
         recentOrders.forEach(order => {
+            // Determine order type display
+            let orderTypeText = order.side === 'buy' ? 'Покупка' : 'Продажа';
+            if (order.orderType === 'limit') {
+                orderTypeText = order.side === 'buy' ? 'Лимит покупки' : 'Лимит продажи';
+            }
+            
+            // Determine status display
+            let statusClass = '';
+            let statusText = '';
+            if (order.status === 'open') {
+                statusClass = 'pending';
+                statusText = 'Открыт';
+            } else if (order.status === 'filled') {
+                statusClass = 'completed';
+                statusText = 'Исполнен';
+            } else {
+                statusClass = 'failed';
+                statusText = 'Отменен';
+            }
+            
             const item = document.createElement('div');
             item.className = 'order-item';
             item.innerHTML = `
                 <div class="order-left">
                     <div class="order-pair">${order.pair}</div>
                     <div class="order-details">
-                        <span class="order-type ${order.side}">${order.side === 'buy' ? 'Покупка' : 'Продажа'}</span>
+                        <span class="order-type ${order.side}">${orderTypeText}</span>
                         <span class="order-time">${this.formatTime(order.timestamp)}</span>
                     </div>
                 </div>
                 <div class="order-right">
                     <div class="order-amount">${this.formatAmount(order.amount)} ${order.baseAsset}</div>
                     <div class="order-total">${this.formatPrice(order.total)}</div>
+                    <div class="order-status ${statusClass}">${statusText}</div>
                 </div>
             `;
             historyContainer.appendChild(item);
@@ -773,7 +816,71 @@ class SpotTrading {
             }
         }
 
-        // Execute trade
+        if (this.orderType === 'limit') {
+            // Handle limit order - add to order book instead of immediate execution
+            await this.placeLimitOrder(amount, price, fee, total);
+        } else {
+            // Handle market order - execute immediately
+            await this.executeMarketOrder(amount, price, fee, total);
+        }
+    };
+
+    async placeLimitOrder(amount, price, fee, total) {
+        // For limit orders, we add them to the order book instead of executing immediately
+        // In a real exchange, this would go to a matching engine
+        
+        // Create limit order
+        const order = {
+            id: Date.now().toString(),
+            pair: `${this.currentPair.base}/${this.currentPair.quote}`,
+            side: this.tradeType,
+            amount: amount,
+            price: price,
+            total: total,
+            fee: fee,
+            baseAsset: this.currentPair.base,
+            quoteAsset: this.currentPair.quote,
+            timestamp: new Date(),
+            status: 'open', // Limit orders start as open
+            orderType: 'limit'
+        };
+
+        // Add to order history
+        this.orderHistory.push(order);
+        
+        // For simulation purposes, we'll check if the order can be executed immediately
+        // based on current market price
+        const canExecute = this.canExecuteLimitOrder(order);
+        
+        if (canExecute) {
+            // Execute the limit order immediately
+            await this.executeLimitOrder(order);
+            this.showNotification(`Лимитный ордер выполнен по цене ${this.formatPrice(price)}`, 'success');
+        } else {
+            // Add to open orders and reserve funds
+            this.reserveFundsForOrder(order);
+            this.showNotification(`Лимитный ордер размещен в стакане по цене ${this.formatPrice(price)}`, 'info');
+        }
+        
+        // Save data
+        this.saveUserData();
+        
+        // Update display
+        this.updateDisplay();
+        
+        // Clear form
+        document.getElementById('amountInput').value = '';
+        document.getElementById('totalInput').value = '';
+        if (document.getElementById('priceInput')) {
+            document.getElementById('priceInput').value = '';
+        }
+        
+        // Show order placed modal instead of success modal for limit orders
+        this.showOrderPlacedModal(order);
+    }
+
+    async executeMarketOrder(amount, price, fee, total) {
+        // Execute trade immediately
         if (this.tradeType === 'buy') {
             // Deduct quote currency and fee
             this.balance[this.currentPair.quote] -= (total + fee);
@@ -798,7 +905,8 @@ class SpotTrading {
             baseAsset: this.currentPair.base,
             quoteAsset: this.currentPair.quote,
             timestamp: new Date(),
-            status: 'filled'
+            status: 'filled',
+            orderType: 'market'
         };
 
         this.orderHistory.push(order);
@@ -821,6 +929,106 @@ class SpotTrading {
 
         // Show success modal
         this.showSuccessModal(order);
+    }
+
+    canExecuteLimitOrder(order) {
+        // Check if a limit order can be executed immediately based on current market price
+        if (order.side === 'buy') {
+            // Buy limit order can execute if current price is less than or equal to limit price
+            return this.currentPrice <= order.price;
+        } else {
+            // Sell limit order can execute if current price is greater than or equal to limit price
+            return this.currentPrice >= order.price;
+        }
+    }
+
+    reserveFundsForOrder(order) {
+        // Reserve funds for limit orders (they don't execute immediately)
+        if (order.side === 'buy') {
+            // Reserve quote currency for buy orders
+            const requiredBalance = order.total + order.fee;
+            this.balance[this.currentPair.quote] -= requiredBalance;
+            // Store reserved amount for potential cancellation
+            if (!this.reservedFunds) this.reservedFunds = {};
+            this.reservedFunds[order.id] = {
+                asset: this.currentPair.quote,
+                amount: requiredBalance
+            };
+        } else {
+            // Reserve base currency for sell orders
+            this.balance[this.currentPair.base] -= order.amount;
+            // Store reserved amount for potential cancellation
+            if (!this.reservedFunds) this.reservedFunds = {};
+            this.reservedFunds[order.id] = {
+                asset: this.currentPair.base,
+                amount: order.amount
+            };
+        }
+    }
+
+    releaseReservedFunds(orderId) {
+        // Release reserved funds when order is cancelled or fully executed
+        if (this.reservedFunds && this.reservedFunds[orderId]) {
+            const reserved = this.reservedFunds[orderId];
+            this.balance[reserved.asset] = (this.balance[reserved.asset] || 0) + reserved.amount;
+            delete this.reservedFunds[orderId];
+        }
+    }
+
+    cancelOrder(orderId) {
+        // Cancel an open order and release reserved funds
+        const orderIndex = this.orderHistory.findIndex(o => o.id === orderId);
+        if (orderIndex !== -1) {
+            const order = this.orderHistory[orderIndex];
+            if (order.status === 'open') {
+                // Update order status
+                this.orderHistory[orderIndex].status = 'cancelled';
+                
+                // Release reserved funds
+                this.releaseReservedFunds(orderId);
+                
+                // Save data and update display
+                this.saveUserData();
+                this.updateDisplay();
+                
+                this.showNotification(`Ордер отменен`, 'info');
+                return true;
+            }
+        }
+        return false;
+    }
+
+    async executeLimitOrder(order) {
+        // Execute a limit order that has been matched
+        const orderId = order.id;
+        
+        // Update order status
+        const orderIndex = this.orderHistory.findIndex(o => o.id === orderId);
+        if (orderIndex !== -1) {
+            this.orderHistory[orderIndex].status = 'filled';
+        }
+        
+        // Release reserved funds
+        this.releaseReservedFunds(orderId);
+        
+        // Execute the trade
+        if (order.side === 'buy') {
+            // Add base currency
+            this.balance[this.currentPair.base] = (this.balance[this.currentPair.base] || 0) + order.amount;
+        } else {
+            // Add quote currency minus fee
+            const netAmount = order.total - order.fee;
+            this.balance[this.currentPair.quote] = (this.balance[this.currentPair.quote] || 0) + netAmount;
+        }
+        
+        // Sync with main user balance
+        this.syncWithMainBalance();
+        
+        // Save data
+        this.saveUserData();
+        
+        // Update display
+        this.updateDisplay();
     }
 
     showSuccessModal(order) {
@@ -859,6 +1067,54 @@ class SpotTrading {
                     <div class="success-order-item">
                         <span>Комиссия:</span>
                         <span>${this.formatPrice(order.fee)}</span>
+                    </div>
+                `;
+            }
+            
+            modal.style.display = 'flex';
+        }
+    }
+
+    showOrderPlacedModal(order) {
+        const modal = document.getElementById('successModal');
+        const successDetails = document.getElementById('successDetails');
+        const successTitle = document.getElementById('successTitle');
+        const successMessage = document.getElementById('successMessage');
+        
+        if (modal) {
+            if (successTitle) {
+                successTitle.textContent = order.side === 'buy' ? 'Лимитный ордер на покупку размещен!' : 'Лимитный ордер на продажу размещен!';
+            }
+            
+            if (successMessage) {
+                successMessage.textContent = `Ваш лимитный ордер размещен в стакане`;
+            }
+            
+            if (successDetails) {
+                successDetails.innerHTML = `
+                    <div class="success-order-item">
+                        <span>Пара:</span>
+                        <span>${order.pair}</span>
+                    </div>
+                    <div class="success-order-item">
+                        <span>Тип:</span>
+                        <span>Лимитный</span>
+                    </div>
+                    <div class="success-order-item">
+                        <span>Количество:</span>
+                        <span>${this.formatAmount(order.amount)} ${order.baseAsset}</span>
+                    </div>
+                    <div class="success-order-item">
+                        <span>Цена:</span>
+                        <span>${this.formatPrice(order.price)}</span>
+                    </div>
+                    <div class="success-order-item">
+                        <span>Общая сумма:</span>
+                        <span>${this.formatPrice(order.total)}</span>
+                    </div>
+                    <div class="success-order-item">
+                        <span>Статус:</span>
+                        <span>Открыт</span>
                     </div>
                 `;
             }
@@ -1057,8 +1313,102 @@ function refreshBalance() {
 }
 
 function viewAllOrders() {
-    // Navigate to orders page or show modal with all orders
-    console.log('View all orders functionality');
+    // Show all orders in a modal with cancellation capability
+    const orders = window.spotTrading.orderHistory.slice().reverse();
+    
+    if (orders.length === 0) {
+        window.spotTrading.showNotification('Нет ордеров', 'info');
+        return;
+    }
+    
+    // Create a simple modal to show all orders
+    let ordersHtml = '';
+    orders.forEach(order => {
+        // Determine order type display
+        let orderTypeText = order.side === 'buy' ? 'Покупка' : 'Продажа';
+        if (order.orderType === 'limit') {
+            orderTypeText = order.side === 'buy' ? 'Лимит покупки' : 'Лимит продажи';
+        }
+        
+        // Determine status display
+        let statusText = '';
+        if (order.status === 'open') {
+            statusText = 'Открыт';
+        } else if (order.status === 'filled') {
+            statusText = 'Исполнен';
+        } else {
+            statusText = 'Отменен';
+        }
+        
+        // Add cancel button for open orders
+        const cancelButton = order.status === 'open' ? 
+            `<button class="cancel-order-btn" onclick="cancelSpecificOrder('${order.id}')" style="margin-left: 10px; background: #f87171; color: #0f172a; border: none; padding: 4px 8px; border-radius: 4px; font-size: 12px; cursor: pointer;">Отменить</button>` : '';
+        
+        ordersHtml += `
+            <div style="padding: 10px; border-bottom: 1px solid #1e293b;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <strong>${order.pair}</strong> - ${orderTypeText}
+                        <div style="font-size: 14px; color: #94a3b8;">
+                            Количество: ${window.spotTrading.formatAmount(order.amount)} ${order.baseAsset} | 
+                            Цена: ${window.spotTrading.formatPrice(order.price)} | 
+                            Статус: ${statusText}
+                        </div>
+                    </div>
+                    ${cancelButton}
+                </div>
+            </div>
+        `;
+    });
+    
+    // Create modal
+    const modal = document.createElement('div');
+    modal.id = 'allOrdersModal';
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.7);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 10000;
+    `;
+    
+    modal.innerHTML = `
+        <div style="background: #1e293b; border-radius: 16px; width: 90%; max-width: 500px; max-height: 80vh; overflow-y: auto;">
+            <div style="padding: 20px; border-bottom: 1px solid #1e293b; display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin: 0; color: #e6f1ff;">Все ордера</h3>
+                <button onclick="closeAllOrdersModal()" style="background: transparent; border: none; color: #94a3b8; font-size: 20px; cursor: pointer;">×</button>
+            </div>
+            <div style="padding: 20px;">
+                ${ordersHtml}
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+}
+
+function cancelSpecificOrder(orderId) {
+    if (window.spotTrading && window.spotTrading.cancelOrder(orderId)) {
+        // Remove the order from the modal display
+        const modal = document.getElementById('allOrdersModal');
+        if (modal) {
+            // Refresh the modal
+            closeAllOrdersModal();
+            viewAllOrders();
+        }
+    }
+}
+
+function closeAllOrdersModal() {
+    const modal = document.getElementById('allOrdersModal');
+    if (modal) {
+        modal.remove();
+    }
 }
 
 // Navigation function

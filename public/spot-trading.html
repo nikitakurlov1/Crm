@@ -9,6 +9,7 @@
     <meta name="theme-color" content="#0066CC">
     <meta name="msapplication-TileColor" content="#0066CC">
     <link rel="stylesheet" href="spot-trading.css">
+    <link rel="stylesheet" href="bottom-nav.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="logos.js"></script>
@@ -20,13 +21,10 @@
         <!-- Header -->
         <header class="header">
             <div class="header-left">
-                <button class="icon-btn back-btn" onclick="goBack()">
+                <button class="icon-btn back-btn lime-green" onclick="goBack()">
                     <i class="fas fa-arrow-left"></i>
                 </button>
                 <h1 class="page-title">Спот торговля</h1>
-            </div>
-            <div class="header-right">
-                <div class="user-avatar" id="userAvatar">U</div>
             </div>
         </header>
 
@@ -46,7 +44,7 @@
                     </div>
                     <div class="pair-price">
                         <div class="current-price" id="currentPrice">$67,543.21</div>
-                        <div class="price-change" id="priceChange">
+                        <div class="price-change positive" id="priceChange">
                             <i class="fas fa-arrow-up"></i>
                             +2.45%
                         </div>
@@ -54,25 +52,26 @@
                 </div>
             </section>
 
-            <!-- Balance Section -->
+            <!-- Simplified Balance Section -->
             <section class="balance-section">
-                <div class="balance-card">
+                <div class="balance-card compact">
                     <div class="balance-header">
-                        <span class="balance-label">Доступный баланс</span>
-                        <button class="refresh-btn" onclick="refreshBalance()">
-                            <i class="fas fa-sync-alt"></i>
-                        </button>
+                        <span class="balance-label">Доступно</span>
                     </div>
-                    <div class="balance-amount" id="accountBalance">$0.00</div>
+                    <div class="balance-amount" id="accountBalance">0.00258782 BTC</div>
                 </div>
                 
+                <!-- Simplified portfolio showing only current asset -->
                 <div class="portfolio-summary">
                     <div class="portfolio-header">
-                        <span class="portfolio-title">Мои активы</span>
-                        <span class="portfolio-total" id="portfolioTotal">$0.00</span>
+                        <span class="portfolio-title">Портфель</span>
                     </div>
                     <div class="portfolio-assets" id="portfolioAssets">
-                        <!-- Portfolio assets will be loaded here -->
+                        <div class="portfolio-empty">
+                            <i class="fas fa-wallet"></i>
+                            <p>Вы не владеете этим активом</p>
+                            <span>Купите криптовалюту для торговли</span>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -80,11 +79,11 @@
             <!-- Trading Interface -->
             <section class="trading-interface">
                 <div class="trade-tabs">
-                    <button class="trade-tab active" data-mode="buy" onclick="switchTradeMode('buy')">
+                    <button class="trade-tab active buy-tab" data-mode="buy" onclick="switchTradeMode('buy')">
                         <i class="fas fa-arrow-up"></i>
                         Купить
                     </button>
-                    <button class="trade-tab" data-mode="sell" onclick="switchTradeMode('sell')">
+                    <button class="trade-tab sell-tab" data-mode="sell" onclick="switchTradeMode('sell')">
                         <i class="fas fa-arrow-down"></i>
                         Продать
                     </button>
@@ -149,20 +148,84 @@
                     </div>
 
                     <!-- Trade Button -->
-                    <button class="trade-execute-btn" id="executeTradeBtn" onclick="executeTrade()" disabled>
-                        <span id="tradeBtnText">Купить</span>
+                    <button class="trade-execute-btn buy-btn" id="executeTradeBtn" onclick="executeTrade()" disabled>
+                        <span id="tradeBtnText">Купить BTC</span>
                     </button>
                 </div>
             </section>
 
-            <!-- Recent Orders -->
+            <!-- Recent Orders with Improved Styling -->
             <section class="recent-orders">
                 <div class="section-header">
                     <h3>Недавние сделки</h3>
                     <button class="text-btn" onclick="viewAllOrders()">Все сделки</button>
                 </div>
                 <div class="orders-list" id="recentOrdersList">
-                    <!-- Orders will be loaded dynamically -->
+                    <div class="order-item">
+                        <div class="order-left">
+                            <div class="order-pair">AVAX/USDT</div>
+                            <div class="order-details">
+                                <span class="order-type sell">Продажа</span>
+                                <span class="order-time">03:44</span>
+                            </div>
+                        </div>
+                        <div class="order-right">
+                            <div class="order-amount">4.08997955 AVAX</div>
+                            <div class="order-total">$119.30</div>
+                        </div>
+                    </div>
+                    <div class="order-item">
+                        <div class="order-left">
+                            <div class="order-pair">BTC/USDT</div>
+                            <div class="order-details">
+                                <span class="order-type buy">Покупка</span>
+                                <span class="order-time">21:50</span>
+                            </div>
+                        </div>
+                        <div class="order-right">
+                            <div class="order-amount">0.00089995 BTC</div>
+                            <div class="order-total">$100.00</div>
+                        </div>
+                    </div>
+                    <div class="order-item">
+                        <div class="order-left">
+                            <div class="order-pair">BTC/USDT</div>
+                            <div class="order-details">
+                                <span class="order-type sell">Продажа</span>
+                                <span class="order-time">21:49</span>
+                            </div>
+                        </div>
+                        <div class="order-right">
+                            <div class="order-amount">0.0090021 BTC</div>
+                            <div class="order-total">$1,000.00</div>
+                        </div>
+                    </div>
+                    <div class="order-item">
+                        <div class="order-left">
+                            <div class="order-pair">BTC/USDT</div>
+                            <div class="order-details">
+                                <span class="order-type buy">Покупка</span>
+                                <span class="order-time">01:10</span>
+                            </div>
+                        </div>
+                        <div class="order-right">
+                            <div class="order-amount">0.00088942 BTC</div>
+                            <div class="order-total">$100.00</div>
+                        </div>
+                    </div>
+                    <div class="order-item">
+                        <div class="order-left">
+                            <div class="order-pair">BTC/USDT</div>
+                            <div class="order-details">
+                                <span class="order-type buy">Покупка</span>
+                                <span class="order-time">01:09</span>
+                            </div>
+                        </div>
+                        <div class="order-right">
+                            <div class="order-amount">0.00088958 BTC</div>
+                            <div class="order-total">$100.00</div>
+                        </div>
+                    </div>
                 </div>
             </section>
         </main>
@@ -180,10 +243,6 @@
             <button class="nav-btn active">
                 <i class="fas fa-chart-line"></i>
                 <span>Торговля</span>
-            </button>
-            <button class="nav-btn" onclick="window.location.href='news.html'">
-                <i class="fas fa-newspaper"></i>
-                <span>Новости</span>
             </button>
             <button class="nav-btn" onclick="window.location.href='setting.html'">
                 <i class="fas fa-cog"></i>

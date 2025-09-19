@@ -4,6 +4,26 @@ function goBack() {
     window.history.back();
 }
 
+// Global function to show toast
+function showToast(message, type = 'info') {
+    const toastContainer = document.getElementById('toastContainer');
+    if (!toastContainer) return;
+
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.textContent = message;
+    // Ограничиваем максимум двумя уведомлениями
+    while (toastContainer.children.length >= 2) {
+        toastContainer.removeChild(toastContainer.firstElementChild);
+    }
+
+    toastContainer.appendChild(toast);
+
+    setTimeout(() => {
+        toast.remove();
+    }, 3000);
+}
+
 class SettingsPage {
     constructor() {
         this.init();
@@ -12,6 +32,7 @@ class SettingsPage {
     init() {
         this.bindEvents();
         this.loadSettings();
+        this.loadUserProfile();
     }
 
     bindEvents() {
@@ -51,7 +72,7 @@ class SettingsPage {
         const searchBtn = document.querySelector('.header-right .icon-btn');
         if (searchBtn) {
             searchBtn.addEventListener('click', () => {
-                this.showToast('Поиск по настройкам', 'info');
+                showToast('Поиск по настройкам', 'info');
             });
         }
     }
@@ -87,7 +108,7 @@ class SettingsPage {
                 this.showAppInfo();
                 break;
             default:
-                this.showToast('Функция в разработке', 'info');
+                showToast('Функция в разработке', 'info');
                 break;
         }
     }
@@ -100,7 +121,7 @@ class SettingsPage {
         switch (title) {
             case 'Скрыть баланс':
                 this.saveSetting('hideBalance', isChecked);
-                this.showToast(
+                showToast(
                     isChecked ? 'Баланс скрыт' : 'Баланс отображается',
                     'success'
                 );
@@ -108,45 +129,26 @@ class SettingsPage {
                 break;
             case 'Уведомления':
                 this.saveSetting('notifications', isChecked);
-                this.showToast(
+                showToast(
                     isChecked ? 'Уведомления включены' : 'Уведомления отключены',
                     'success'
                 );
                 break;
             case 'Автообновление':
                 this.saveSetting('autoUpdate', isChecked);
-                this.showToast(
+                showToast(
                     isChecked ? 'Автообновление включено' : 'Автообновление отключено',
                     'success'
                 );
                 break;
             default:
-                this.showToast('Настройка изменена', 'success');
+                showToast('Настройка изменена', 'success');
                 break;
         }
     }
 
     saveSetting(key, value) {
         localStorage.setItem(key, value);
-    }
-
-    showToast(message, type = 'info') {
-        const toastContainer = document.getElementById('toastContainer');
-        if (!toastContainer) return;
-
-        const toast = document.createElement('div');
-        toast.className = `toast ${type}`;
-        toast.textContent = message;
-        // Ограничиваем максимум двумя уведомлениями
-        while (toastContainer.children.length >= 2) {
-            toastContainer.removeChild(toastContainer.firstElementChild);
-        }
-
-        toastContainer.appendChild(toast);
-
-        setTimeout(() => {
-            toast.remove();
-        }, 3000);
     }
 
     handleLogout() {
@@ -182,17 +184,17 @@ class SettingsPage {
 
         // Простая валидация
         if (newPassword.length < 6) {
-            this.showToast('Новый пароль должен содержать минимум 6 символов', 'error');
+            showToast('Новый пароль должен содержать минимум 6 символов', 'error');
             return;
         }
 
         if (newPassword !== confirmPassword) {
-            this.showToast('Пароли не совпадают', 'error');
+            showToast('Пароли не совпадают', 'error');
             return;
         }
 
         // Симулируем смену пароля
-        this.showToast('Пароль успешно изменен', 'success');
+        showToast('Пароль успешно изменен', 'success');
         this.closeModal('changePasswordModal');
         
         // Очищаем форму
@@ -209,7 +211,7 @@ class SettingsPage {
             localStorage.removeItem('deposits');
             localStorage.removeItem('withdrawals');
             
-            this.showToast('История транзакций очищена', 'success');
+            showToast('История транзакций очищена', 'success');
         }
     }
 
@@ -217,7 +219,7 @@ class SettingsPage {
         if (confirm('Вы уверены, что хотите сбросить все данные приложения? Это действие нельзя отменить.')) {
             // Очищаем все данные
             localStorage.clear();
-            this.showToast('Приложение сброшено', 'success');
+            showToast('Приложение сброшено', 'success');
             
             // Перезагружаем страницу
             setTimeout(() => {
@@ -253,7 +255,7 @@ class SettingsPage {
         link.click();
         document.body.removeChild(link);
         
-        this.showToast('Данные экспортированы', 'success');
+        showToast('Данные экспортированы', 'success');
     }
 
     showAppInfo() {
@@ -296,7 +298,7 @@ class SettingsPage {
             🔮 Будущее криптотрейдинга уже здесь!
         `;
 
-        this.showToast(message, 'info');
+        showToast(message, 'info');
     }
 
     updateBalanceVisibility(hideBalance) {
@@ -335,6 +337,21 @@ class SettingsPage {
         }
         if (autoUpdateToggle) {
             autoUpdateToggle.checked = autoUpdate;
+        }
+    }
+
+    loadUserProfile() {
+        // Load user profile data
+        const user = JSON.parse(localStorage.getItem('user')) || {};
+        const profileName = document.getElementById('profileName');
+        const profileEmail = document.getElementById('profileEmail');
+        
+        if (profileName) {
+            profileName.textContent = user.name || 'Пользователь';
+        }
+        
+        if (profileEmail) {
+            profileEmail.textContent = user.email || 'user@example.com';
         }
     }
 

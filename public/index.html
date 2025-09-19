@@ -14,7 +14,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="application-name" content="SellBit">
     <link rel="manifest" href="manifest.json">
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="index.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="logos.js"></script>
@@ -23,8 +23,6 @@
 </head>
 <body>
     <div class="container">
-
-
         <!-- Main Content -->
         <main class="main-content">
             <!-- Login Form -->
@@ -91,6 +89,20 @@
                         </div>
                     </div>
                     
+                    <!-- Phone Number Input with Country Selector -->
+                    <div class="form-group">
+                        <label for="phone">Номер телефона</label>
+                        <div class="input-wrapper">
+                            <i class="fas fa-phone"></i>
+                            <input type="tel" id="phone" name="phone" placeholder="+7 (999) 123-45-67" required>
+                            <button type="button" id="countrySelector" class="country-selector">
+                                <span id="selectedCountryFlag">🇷🇺</span>
+                                <span id="selectedCountryCode">+7</span>
+                                <i class="fas fa-chevron-down"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
                     <div class="form-group">
                         <label for="registerPassword">Пароль</label>
                         <div class="input-wrapper">
@@ -127,6 +139,28 @@
 
         <!-- Notification Container -->
         <div class="notification-container" id="notificationContainer"></div>
+    </div>
+
+    <!-- Country Selection Bottom Sheet -->
+    <div class="bottom-sheet hidden" id="countrySheet">
+        <div class="sheet-overlay"></div>
+        <div class="sheet-container">
+            <div class="sheet-header">
+                <h3>Выберите страну</h3>
+                <button class="close-sheet">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="sheet-content">
+                <div class="search-container">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="countrySearch" placeholder="Поиск страны...">
+                </div>
+                <div class="countries-list" id="countriesList">
+                    <!-- Countries will be populated by JavaScript -->
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="script.js"></script>

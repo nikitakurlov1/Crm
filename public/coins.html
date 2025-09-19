@@ -7,9 +7,16 @@
     <title>Монеты - SellBit</title>
     <link rel="icon" type="image/svg+xml" href="sellbit-logo-icon.svg">
     <link rel="apple-touch-icon" href="sellbit-logo-main.jpg">
-    <meta name="theme-color" content="#0066CC">
-    <meta name="msapplication-TileColor" content="#0066CC">
+    <meta name="theme-color" content="#0a192f">
+    <meta name="msapplication-TileColor" content="#0a192f">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="SellBit">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="SellBit">
+    <link rel="manifest" href="manifest.json">
     <link rel="stylesheet" href="coins.css">
+    <link rel="stylesheet" href="bottom-nav.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="logos.js"></script>
@@ -18,36 +25,20 @@
 </head>
 
 <body>
-    <!-- PWA Status Bar -->
-    <div class="pwa-status-bar"></div>
-    
-    
     <div class="app-container">
-        <!-- Header -->
+        <!-- Header with full-width search input -->
         <header class="header">
-            <div class="header-left">
-                <button class="icon-btn back-btn" onclick="goBack()">
-                    <i class="fas fa-arrow-left"></i>
-                </button>
-                <h1 class="page-title">Монеты</h1>
-            </div>
-            <div class="header-right">
-                <button class="icon-btn search-btn" onclick="toggleSearch()">
-                    <i class="fas fa-search"></i>
-                </button>
+            <!-- Removed page title as requested -->
+            <div class="search-container">
+                <div class="search-input-container full-width">
+                    <i class="fas fa-search search-icon"></i>
+                    <input type="text" id="headerSearchInput" class="search-input" placeholder="Поиск монет..." oninput="filterCoins()">
+                    <button class="clear-search" onclick="clearSearch()" style="display: none;">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
             </div>
         </header>
-
-        <!-- Search Bar -->
-        <div class="search-bar" id="searchBar" style="display: none;">
-            <div class="search-input-container">
-                <i class="fas fa-search search-icon"></i>
-                <input type="text" id="searchInput" class="search-input" placeholder="Поиск монет..." oninput="filterCoins()">
-                <button class="clear-search" onclick="clearSearch()" style="display: none;">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-        </div>
 
         <!-- Main Content -->
         <main class="main-content">
@@ -88,11 +79,11 @@
 
         <!-- Bottom Navigation -->
         <nav class="bottom-nav">
-                            <button class="nav-btn" onclick="window.location.href='home.html'">
+            <button class="nav-btn" onclick="window.location.href='home.html'">
                 <i class="fas fa-home"></i>
                 <span>Главная</span>
             </button>
-            <button class="nav-btn active" onclick="window.location.href='coins.html'">
+            <button class="nav-btn active">
                 <i class="fas fa-coins"></i>
                 <span>Монеты</span>
             </button>
@@ -100,11 +91,6 @@
                 <i class="fas fa-chart-line"></i>
                 <span>Торговля</span>
             </button>
-            <button class="nav-btn" onclick="window.location.href='news.html'">
-                <i class="fas fa-newspaper"></i>
-                <span>Новости</span>
-            </button>
-
             <button class="nav-btn" onclick="window.location.href='setting.html'">
                 <i class="fas fa-cog"></i>
                 <span>Настройки</span>

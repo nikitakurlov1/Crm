@@ -550,5 +550,3 @@ function showToast(title, message, type = 'info') {
         toast.remove();
     }, 3000);
 }
-
-

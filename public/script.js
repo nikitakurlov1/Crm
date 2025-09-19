@@ -2,6 +2,32 @@
 let currentUser = null;
 let authToken = localStorage.getItem('authToken');
 
+// Country data for phone number input
+const countries = [
+    { code: "RU", name: "Россия", flag: "🇷🇺", phoneCode: "+7" },
+    { code: "US", name: "США", flag: "🇺🇸", phoneCode: "+1" },
+    { code: "DE", name: "Германия", flag: "🇩🇪", phoneCode: "+49" },
+    { code: "FR", name: "Франция", flag: "🇫🇷", phoneCode: "+33" },
+    { code: "GB", name: "Великобритания", flag: "🇬🇧", phoneCode: "+44" },
+    { code: "IT", name: "Италия", flag: "🇮🇹", phoneCode: "+39" },
+    { code: "ES", name: "Испания", flag: "🇪🇸", phoneCode: "+34" },
+    { code: "JP", name: "Япония", flag: "🇯🇵", phoneCode: "+81" },
+    { code: "KR", name: "Южная Корея", flag: "🇰🇷", phoneCode: "+82" },
+    { code: "CN", name: "Китай", flag: "🇨🇳", phoneCode: "+86" },
+    { code: "IN", name: "Индия", flag: "🇮🇳", phoneCode: "+91" },
+    { code: "BR", name: "Бразилия", flag: "🇧🇷", phoneCode: "+55" },
+    { code: "CA", name: "Канада", flag: "🇨🇦", phoneCode: "+1" },
+    { code: "AU", name: "Австралия", flag: "🇦🇺", phoneCode: "+61" },
+    { code: "NL", name: "Нидерланды", flag: "🇳🇱", phoneCode: "+31" },
+    { code: "SE", name: "Швеция", flag: "🇸🇪", phoneCode: "+46" },
+    { code: "CH", name: "Швейцария", flag: "🇨🇭", phoneCode: "+41" },
+    { code: "PL", name: "Польша", flag: "🇵🇱", phoneCode: "+48" },
+    { code: "TR", name: "Турция", flag: "🇹🇷", phoneCode: "+90" },
+    { code: "MX", name: "Мексика", flag: "🇲🇽", phoneCode: "+52" }
+];
+
+let selectedCountry = countries[0]; // Default to Russia
+
 // DOM elements
 const loginForm = document.getElementById('loginForm');
 const registerForm = document.getElementById('registerForm');
@@ -13,10 +39,20 @@ const notificationContainer = document.getElementById('notificationContainer');
 const loginContainer = document.getElementById('login-form');
 const registerContainer = document.getElementById('register-form');
 
+// Country selector elements
+const countrySelector = document.getElementById('countrySelector');
+const countrySheet = document.getElementById('countrySheet');
+const countriesList = document.getElementById('countriesList');
+const countrySearch = document.getElementById('countrySearch');
+const selectedCountryFlag = document.getElementById('selectedCountryFlag');
+const selectedCountryCode = document.getElementById('selectedCountryCode');
+const phoneInput = document.getElementById('phone');
+
 // Initialize app
 document.addEventListener('DOMContentLoaded', function() {
     initializeApp();
     setupEventListeners();
+    setupCountrySelector();
     
     // Check if user is already logged in
     const rememberMe = localStorage.getItem('rememberMe') === 'true';
@@ -50,9 +86,103 @@ function setupEventListeners() {
     // Form submissions
     loginForm.addEventListener('submit', handleLogin);
     registerForm.addEventListener('submit', handleRegistration);
+    
+    // Country selector events
+    if (countrySelector) {
+        countrySelector.addEventListener('click', showCountrySheet);
+    }
+    
+    // Setup event listeners for elements inside the bottom sheet
+    if (countrySheet) {
+        // Close button
+        const closeSheet = countrySheet.querySelector('.close-sheet');
+        if (closeSheet) {
+            closeSheet.addEventListener('click', hideCountrySheet);
+        }
+        
+        // Overlay click
+        const sheetOverlay = countrySheet.querySelector('.sheet-overlay');
+        if (sheetOverlay) {
+            sheetOverlay.addEventListener('click', hideCountrySheet);
+        }
+    }
+    
+    if (countrySearch) {
+        countrySearch.addEventListener('input', filterCountries);
+    }
 }
 
+function setupCountrySelector() {
+    // Populate countries list
+    populateCountriesList(countries);
+    
+    // Set default country
+    updateSelectedCountry(selectedCountry);
+}
 
+function populateCountriesList(countriesArray) {
+    if (!countriesList) return;
+    
+    countriesList.innerHTML = '';
+    
+    countriesArray.forEach(country => {
+        const countryElement = document.createElement('div');
+        countryElement.className = 'country-item';
+        countryElement.innerHTML = `
+            <span class="country-flag">${country.flag}</span>
+            <span class="country-name">${country.name}</span>
+            <span class="country-code">${country.phoneCode}</span>
+        `;
+        
+        countryElement.addEventListener('click', () => {
+            selectCountry(country);
+            hideCountrySheet();
+        });
+        
+        countriesList.appendChild(countryElement);
+    });
+}
+
+function filterCountries() {
+    const searchTerm = countrySearch.value.toLowerCase();
+    const filteredCountries = countries.filter(country => 
+        country.name.toLowerCase().includes(searchTerm) || 
+        country.phoneCode.includes(searchTerm)
+    );
+    populateCountriesList(filteredCountries);
+}
+
+function showCountrySheet() {
+    if (countrySheet) {
+        countrySheet.classList.remove('hidden');
+    }
+}
+
+function hideCountrySheet() {
+    if (countrySheet) {
+        countrySheet.classList.add('hidden');
+    }
+}
+
+function selectCountry(country) {
+    selectedCountry = country;
+    updateSelectedCountry(country);
+    
+    // Update phone input placeholder
+    if (phoneInput) {
+        phoneInput.placeholder = `${country.phoneCode} (999) 123-45-67`;
+        phoneInput.focus();
+    }
+}
+
+function updateSelectedCountry(country) {
+    if (selectedCountryFlag) {
+        selectedCountryFlag.textContent = country.flag;
+    }
+    if (selectedCountryCode) {
+        selectedCountryCode.textContent = country.phoneCode;
+    }
+}
 
 // View management
 function showView(view) {
@@ -159,6 +289,7 @@ async function handleRegistration(e) {
     const data = {
         username: formData.get('username'),
         email: formData.get('email'),
+        phone: formData.get('phone'),
         password: formData.get('password'),
         confirmPassword: formData.get('confirmPassword')
     };
@@ -332,6 +463,10 @@ function validateRegistrationData(data) {
         errors.push('Введите корректный email');
     }
 
+    if (!data.phone || data.phone.length < 10) {
+        errors.push('Введите корректный номер телефона');
+    }
+
     if (!data.password || data.password.length < 6) {
         errors.push('Пароль должен содержать минимум 6 символов');
     }
@@ -405,9 +540,14 @@ document.addEventListener('keydown', (e) => {
         }
     }
     
-    // Escape to close notifications
+    // Escape to close notifications and country sheet
     if (e.key === 'Escape') {
         const notifications = document.querySelectorAll('.notification');
         notifications.forEach(notification => notification.remove());
+        
+        // Close country sheet if open
+        if (!countrySheet.classList.contains('hidden')) {
+            hideCountrySheet();
+        }
     }
 });

@@ -67,6 +67,9 @@ document.addEventListener('DOMContentLoaded', async function() {
             }
         });
         
+        // Initialize action sheet event listeners
+        initializeActionSheets();
+        
     } catch (error) {
         console.error('Ошибка инициализации:', error);
         // Если есть ошибка с токеном, перенаправляем на логин
@@ -75,6 +78,95 @@ document.addEventListener('DOMContentLoaded', async function() {
         window.location.href = '/index.html';
     }
 });
+
+// Initialize action sheets event listeners
+function initializeActionSheets() {
+    // Close sheets when clicking overlay
+    document.querySelectorAll('.sheet-overlay').forEach(overlay => {
+        overlay.addEventListener('click', function() {
+            const sheet = this.closest('.bottom-sheet');
+            if (sheet) {
+                sheet.classList.add('hidden');
+            }
+        });
+    });
+    
+    // Close sheets with Escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            document.querySelectorAll('.bottom-sheet').forEach(sheet => {
+                sheet.classList.add('hidden');
+            });
+        }
+    });
+    
+    // Form submissions
+    const depositForm = document.getElementById('depositForm');
+    const withdrawForm = document.getElementById('withdrawForm');
+    
+    if (depositForm) {
+        depositForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const amount = parseFloat(document.getElementById('depositAmount').value);
+            const user = JSON.parse(localStorage.getItem('user'));
+            user.balance += amount;
+            localStorage.setItem('user', JSON.stringify(user));
+            
+            // Синхронизируем с сервером
+            if (window.BalanceSync) {
+                await window.BalanceSync.updateServerBalance(user.balance);
+            }
+            
+            // Пересчитываем показатели без случайностей
+            ensureMonthlySnapshot(user.balance);
+            await loadBalanceAndStats();
+            closeActionSheet('deposit');
+            showToast('Успех', `Баланс пополнен на $${amount.toFixed(2)}`, 'success');
+        });
+    }
+
+    if (withdrawForm) {
+        withdrawForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const amount = parseFloat(document.getElementById('withdrawAmount').value);
+            const user = JSON.parse(localStorage.getItem('user'));
+            
+            if (amount > user.balance) {
+                showToast('Ошибка', 'Недостаточно средств', 'error');
+                return;
+            }
+            
+            user.balance -= amount;
+            localStorage.setItem('user', JSON.stringify(user));
+            
+            // Синхронизируем с сервером
+            if (window.BalanceSync) {
+                await window.BalanceSync.updateServerBalance(user.balance);
+            }
+            
+            // Пересчитываем показатели без случайностей
+            ensureMonthlySnapshot(user.balance);
+            await loadBalanceAndStats();
+            closeActionSheet('withdraw');
+            showToast('Успех', `Выведено $${amount.toFixed(2)}`, 'success');
+        });
+    }
+}
+
+// Action sheet functions
+function openActionSheet(type) {
+    const sheet = document.getElementById(type + 'Sheet');
+    if (sheet) {
+        sheet.classList.remove('hidden');
+    }
+}
+
+function closeActionSheet(type) {
+    const sheet = document.getElementById(type + 'Sheet');
+    if (sheet) {
+        sheet.classList.add('hidden');
+    }
+}
 
 // Безопасное форматирование процентов с ограничением диапазона
 function formatSignedPercent(value) {
@@ -828,15 +920,15 @@ function getPeriodText(minutes) {
 
 
 function openDepositModal() {
-    window.location.href = 'Dep.html';
+    openActionSheet('deposit');
 }
 
 function openWithdrawModal() {
-    window.location.href = 'vivod.html';
+    openActionSheet('withdraw');
 }
 
 function openSupportModal() {
-    window.location.href = 'support.html';
+    openActionSheet('support');
 }
 
 function contactSupport(type) {
@@ -852,11 +944,15 @@ function contactSupport(type) {
             // Здесь можно добавить интеграцию с чат-системой
             break;
     }
-    closeModal('supportModal');
+    closeActionSheet('support');
 }
 
 function closeModal(modalId) {
-    document.getElementById(modalId).style.display = 'none';
+    // This function is deprecated, but kept for compatibility
+    const sheet = document.getElementById(modalId.replace('Modal', 'Sheet'));
+    if (sheet) {
+        sheet.classList.add('hidden');
+    }
 }
 
 function navigateToPage(page) {

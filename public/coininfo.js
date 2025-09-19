@@ -1914,11 +1914,11 @@ class CoinInfoPage {
         if (!chartContainer) return;
 
         this.customChart = new CustomChart(chartContainer, {
-            lineColor: '#1890FF', // Binance blue
-            gridColor: 'rgba(0, 0, 0, 0.05)',
-            textColor: '#8C8C8C',
-            backgroundColor: '#ffffff',
-            timeWindow: 60, // 1 hour minimum window as per memory specification
+            lineColor: '#4ade80', // Lime green (changed from Binance blue)
+            gridColor: 'rgba(30, 41, 59, 0.5)', // Dark grid color
+            textColor: '#94a3b8', // Light gray text
+            backgroundColor: '#0f172a', // Dark blue background
+            timeWindow: 180, // 3 hours (changed from 60 minutes)
             onTimeWindowChange: (startTime, endTime) => {
                 // Update chart info when time window changes
                 this.updateChartInfo(startTime, endTime);
@@ -1931,6 +1931,14 @@ class CoinInfoPage {
         
         // Update chart info display
         this.updateChartInfo();
+        
+        // Set a timeout to ensure we have some data displayed
+        setTimeout(() => {
+            if (this.customChart && (!this.chartData || this.chartData.length < 2)) {
+                console.log('Ensuring chart has initial data');
+                this.updateChartWithIntelligentFallback('1D');
+            }
+        }, 2000);
     }
 
     generateInitialChartData() {
@@ -1969,6 +1977,8 @@ class CoinInfoPage {
     async loadChartData(period = '1D') {
         if (!this.currentCoin) {
             console.warn('No current coin available, cannot load chart data');
+            // Use fallback data even when there's no current coin
+            this.updateChartWithIntelligentFallback(period);
             return;
         }
 
@@ -2021,6 +2031,26 @@ class CoinInfoPage {
     updateChartWithIntelligentFallback(period) {
         if (!this.currentPrice) {
             console.warn('No current price available for intelligent fallback');
+            // If we don't have a current price, show a simple message
+            if (this.customChart) {
+                // Create minimal data points to avoid "No data available"
+                const now = Date.now();
+                const basePrice = 1000; // Default price if we don't have real data
+                const chartData = [
+                    {
+                        time: this.formatTimeString(new Date(now - 60000)),
+                        price: basePrice,
+                        timestamp: now - 60000
+                    },
+                    {
+                        time: this.formatTimeString(new Date(now)),
+                        price: basePrice,
+                        timestamp: now
+                    }
+                ];
+                this.chartData = chartData;
+                this.customChart.setData(chartData);
+            }
             return;
         }
 
@@ -2106,7 +2136,7 @@ class CoinInfoPage {
     }
 
     updateChartWithRealData(priceHistory, period) {
-        if (!this.customChart || !priceHistory.length) return;
+        if (!this.customChart) return;
 
         // Filter data based on period
         const now = new Date();
@@ -2121,6 +2151,13 @@ class CoinInfoPage {
             price: item.price,
             timestamp: new Date(item.timestamp).getTime()
         }));
+
+        // If we don't have enough data points, generate some fallback data
+        if (chartData.length < 2) {
+            console.warn('Not enough real data points, generating fallback data');
+            this.updateChartWithIntelligentFallback(period);
+            return;
+        }
 
         this.chartData = chartData;
         this.customChart.setData(chartData);
@@ -2579,11 +2616,11 @@ class CustomChart {
         this.tooltip = container.querySelector('.chart-tooltip');
         
         this.options = {
-            lineColor: options.lineColor || '#1890FF', // Binance blue
-            gridColor: options.gridColor || 'rgba(0, 0, 0, 0.05)',
-            textColor: options.textColor || '#8C8C8C',
-            backgroundColor: options.backgroundColor || '#ffffff',
-            timeWindow: options.timeWindow || 15, // minutes
+            lineColor: options.lineColor || '#4ade80', // Lime green (changed from Binance blue)
+            gridColor: options.gridColor || 'rgba(30, 41, 59, 0.5)', // Dark grid color
+            textColor: options.textColor || '#94a3b8', // Light gray text
+            backgroundColor: options.backgroundColor || '#0f172a', // Dark blue background
+            timeWindow: options.timeWindow || 180, // 3 hours (changed from 15 minutes)
             onTimeWindowChange: options.onTimeWindowChange || null
         };
         
@@ -2702,14 +2739,23 @@ class CustomChart {
     }
     
     drawNoDataMessage(width, height) {
-        this.ctx.fillStyle = this.options.textColor;
+        // Set dark theme colors
+        this.ctx.fillStyle = '#94a3b8'; // Light gray text
         this.ctx.font = '14px Inter, sans-serif';
         this.ctx.textAlign = 'center';
-        this.ctx.fillText('No data available', width / 2, height / 2);
+        
+        // Draw a more informative message
+        this.ctx.fillText('Загрузка данных...', width / 2, height / 2);
+        
+        // Add a subtle animation effect
+        this.ctx.font = '12px Inter, sans-serif';
+        this.ctx.fillStyle = '#94a3b880'; // Light gray with 50% opacity
+        const dots = '.'.repeat(Math.floor(Date.now() / 500) % 4);
+        this.ctx.fillText(dots, width / 2, height / 2 + 20);
     }
-    
+
     drawGrid(width, height, minPrice, maxPrice) {
-        this.ctx.strokeStyle = this.options.gridColor;
+        this.ctx.strokeStyle = this.options.gridColor || 'rgba(30, 41, 59, 0.5)'; // Dark grid color
         this.ctx.lineWidth = 0.5;
         
         // Horizontal grid lines (price levels) - fewer lines for mobile
@@ -2730,15 +2776,15 @@ class CustomChart {
         const chartHeight = height - 60; // More space for labels
         const priceRange = maxPrice - minPrice;
         
-        this.ctx.strokeStyle = this.options.lineColor;
+        this.ctx.strokeStyle = this.options.lineColor || '#4ade80'; // Lime green
         this.ctx.lineWidth = 2;
         this.ctx.lineCap = 'round';
         this.ctx.lineJoin = 'round';
         
-        // Create gradient fill
+        // Create gradient fill with dark theme colors
         const gradient = this.ctx.createLinearGradient(0, 30, 0, height - 30);
-        gradient.addColorStop(0, this.options.lineColor + '20');
-        gradient.addColorStop(1, this.options.lineColor + '05');
+        gradient.addColorStop(0, `${this.options.lineColor || '#4ade80'}20`); // 20% opacity
+        gradient.addColorStop(1, `${this.options.lineColor || '#4ade80'}05`); // 5% opacity
         
         this.ctx.beginPath();
         
@@ -2771,7 +2817,7 @@ class CustomChart {
     }
     
     drawPriceLabels(width, height, minPrice, maxPrice) {
-        this.ctx.fillStyle = this.options.textColor;
+        this.ctx.fillStyle = this.options.textColor || '#94a3b8'; // Light gray text
         this.ctx.font = '10px Inter, sans-serif';
         this.ctx.textAlign = 'right';
         
@@ -2796,7 +2842,7 @@ class CustomChart {
     }
     
     drawTimeLabels(width, height) {
-        this.ctx.fillStyle = this.options.textColor;
+        this.ctx.fillStyle = this.options.textColor || '#94a3b8'; // Light gray text
         this.ctx.font = '10px Inter, sans-serif';
         
         const timeSteps = 3; // Fewer time labels for mobile
@@ -2824,7 +2870,7 @@ class CustomChart {
             }
         }
     }
-    
+
     // Event handlers
     handleMouseDown(e) {
         this.isDragging = true;
@@ -3004,6 +3050,55 @@ function goToSpotTrading() {
         // Fallback navigation
         window.location.href = 'spot-trading.html';
     }
+}
+
+function goToSpotTradingWithCoin(coinSymbol) {
+    // Get coin data and set it in localStorage for spot trading
+    const coinsData = JSON.parse(localStorage.getItem('coinsData') || '[]');
+    const coin = coinsData.find(c => c.symbol.toUpperCase() === coinSymbol.toUpperCase());
+    
+    if (coin) {
+        localStorage.setItem('currentCoin', JSON.stringify(coin));
+    }
+    
+    window.location.href = `spot-trading.html?coin=${coinSymbol}`;
+}
+
+// Navigate to futures trading page with current coin data
+function goToFuturesTrading() {
+    console.log('CoinInfo: Navigating to futures trading...');
+    
+    // Save current coin data for futures trading
+    if (window.coinInfoPage && window.coinInfoPage.currentCoin) {
+        const currentCoin = window.coinInfoPage.currentCoin;
+        console.log('CoinInfo: Setting currentCoin in localStorage:', currentCoin);
+        
+        // Add timestamp to ensure fresh data
+        const coinDataWithTimestamp = {
+            ...currentCoin,
+            _timestamp: Date.now()
+        };
+        
+        localStorage.setItem('currentCoin', JSON.stringify(coinDataWithTimestamp));
+        
+        // Small delay to ensure localStorage is written
+        setTimeout(() => {
+            // Navigate with coin parameter (use both id and symbol for better compatibility)
+            const coinParam = currentCoin.symbol || currentCoin.id;
+            console.log('CoinInfo: Navigating with coin parameter:', coinParam);
+            
+            window.location.href = `futures-trading.html?coin=${coinParam}`;
+        }, 50);
+    } else {
+        console.warn('CoinInfo: No current coin data available, using fallback navigation');
+        console.log('CoinInfo: window.coinInfoPage:', window.coinInfoPage);
+        // Fallback navigation
+        window.location.href = 'futures-trading.html';
+    }
+}
+
+function openPositionDetails(positionId) {
+    window.location.href = `position.html?positionId=${positionId}`;
 }
 
 function openBuyModal() {

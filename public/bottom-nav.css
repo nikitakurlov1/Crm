@@ -1,0 +1,142 @@
+/* Unified bottom navigation menu styles for all pages */
+.bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background: #0f172a; /* Dark blue background */
+    border-top: 1px solid #1e293b; /* Dark border */
+    display: flex;
+    justify-content: space-around;
+    padding: 8px 0;
+    z-index: 1000;
+    box-sizing: border-box;
+}
+
+.nav-btn {
+    background: transparent;
+    border: none;
+    color: #94a3b8; /* Light gray */
+    padding: 8px 8px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    font-weight: 500;
+    flex: 1;
+    max-width: 70px;
+}
+
+.nav-btn:hover {
+    background: #1e293b; /* Dark hover */
+}
+
+.nav-btn.active {
+    color: #4ade80; /* Lime green */
+}
+
+.nav-btn i {
+    font-size: 18px;
+}
+
+/* Mobile Devices (max-width: 768px) */
+@media (max-width: 768px) {
+    .bottom-nav {
+        padding: 6px 0;
+    }
+    
+    .nav-btn {
+        font-size: 10px;
+        padding: 6px 4px;
+    }
+    
+    .nav-btn i {
+        font-size: 16px;
+    }
+}
+
+/* Small Mobile Devices (max-width: 480px) */
+@media (max-width: 480px) {
+    .bottom-nav {
+        padding: 4px 0;
+    }
+    
+    .nav-btn {
+        font-size: 9px;
+        padding: 4px 2px;
+        max-width: 60px;
+    }
+    
+    .nav-btn i {
+        font-size: 14px;
+    }
+}
+
+/* Very Small Screens (max-width: 320px) */
+@media (max-width: 320px) {
+    .bottom-nav {
+        padding: 3px 0;
+    }
+    
+    .nav-btn {
+        font-size: 8px;
+        padding: 3px 1px;
+        max-width: 50px;
+    }
+    
+    .nav-btn i {
+        font-size: 12px;
+    }
+}
+
+/* Desktop and Tablet Behavior */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .nav-btn {
+        font-size: 13px;
+        padding: 9px 8px;
+    }
+    
+    .nav-btn i {
+        font-size: 20px;
+    }
+}
+
+@media (min-width: 1025px) {
+    .nav-btn {
+        font-size: 14px;
+        padding: 10px 8px;
+    }
+    
+    .nav-btn i {
+        font-size: 22px;
+    }
+}
+
+@media (min-width: 1440px) {
+    .nav-btn {
+        font-size: 15px;
+        padding: 12px 10px;
+    }
+    
+    .nav-btn i {
+        font-size: 24px;
+    }
+}
+
+/* Orientation Handling */
+@media (max-width: 768px) and (orientation: portrait) {
+    .main-content {
+        padding-bottom: 60px;
+    }
+}
+
+@media (max-width: 768px) and (orientation: landscape) {
+    .main-content {
+        padding: 16px;
+        padding-bottom: 80px;
+    }
+}

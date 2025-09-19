@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, minimum-scale=1.0">
+    <title>Портфель - SellBit</title>
+    <link rel="icon" type="image/svg+xml" href="sellbit-logo-icon.svg">
+    <link rel="apple-touch-icon" href="sellbit-logo-main.jpg">
+    <meta name="theme-color" content="#0a192f">
+    <meta name="msapplication-TileColor" content="#0a192f">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="SellBit">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="SellBit">
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="spot-trading.css">
+    <link rel="stylesheet" href="bottom-nav.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="logos.js"></script>
+    <script src="api-utils.js"></script>
+    <script src="pwa-register.js"></script>
+    <style>
+        /* Custom styles for centering the button and making it smaller */
+        .action-buttons-section {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 24px 16px;
+        }
+        
+        .action-buttons-grid {
+            display: flex;
+            justify-content: center;
+            width: auto;
+            max-width: 300px; /* Reduced width */
+        }
+        
+        .action-btn {
+            width: 100%;
+            max-width: 250px; /* Reduced width */
+            margin: 0 auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-left">
+                <button class="icon-btn back-btn lime-green" onclick="goBack()">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+                <h1 class="page-title">Портфель</h1>
+            </div>
+            <div class="header-right">
+                <button class="icon-btn notification-btn" onclick="openNotifications()">
+                    <i class="fas fa-bell"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Balance Overview -->
+            <section class="balance-section">
+                <div class="balance-card">
+                    <div class="balance-header">
+                        <span class="balance-label">Общий баланс</span>
+                    </div>
+                    <div class="balance-amount" id="totalBalance">$0.00</div>
+                    
+                    <!-- Mini Chart -->
+                    <div class="mini-chart-container">
+                        <canvas id="balanceChart" class="mini-chart"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Asset Structure -->
+            <section class="assets-section">
+                <div class="section-header">
+                    <h2>Структура активов</h2>
+                </div>
+                <div class="assets-table-container">
+                    <table class="assets-table">
+                        <thead>
+                            <tr>
+                                <th>Монета</th>
+                                <th>Баланс</th>
+                                <th>Стоимость</th>
+                                <th>PnL 24ч</th>
+                            </tr>
+                        </thead>
+                        <tbody id="assetsTableBody">
+                            <!-- Assets will be populated here -->
+                            <tr>
+                                <td colspan="4" class="no-data">Загрузка активов...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Active Orders -->
+            <section class="orders-section">
+                <div class="section-header">
+                    <h2>Активные ордера</h2>
+                </div>
+                <div class="orders-table-container">
+                    <table class="orders-table">
+                        <thead>
+                            <tr>
+                                <th>Пара</th>
+                                <th>Тип</th>
+                                <th>Цена</th>
+                                <th>Количество</th>
+                                <th>Статус</th>
+                                <th>Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ordersTableBody">
+                            <!-- Orders will be populated here -->
+                            <tr>
+                                <td colspan="6" class="no-data">Нет активных ордеров</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Futures Positions -->
+            <section class="positions-section">
+                <div class="section-header">
+                    <h2>Фьючерсные позиции</h2>
+                </div>
+                <div class="positions-table-container">
+                    <table class="positions-table">
+                        <thead>
+                            <tr>
+                                <th>Пара</th>
+                                <th>Направление</th>
+                                <th>Плечо</th>
+                                <th>Маржа</th>
+                                <th>PnL</th>
+                                <th>Ликвидация</th>
+                                <th>Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody id="positionsTableBody">
+                            <!-- Positions will be populated here -->
+                            <tr>
+                                <td colspan="7" class="no-data">Нет открытых позиций</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Action Buttons -->
+            <section class="action-buttons-section">
+                <div class="action-buttons-grid">
+                    <button class="action-btn primary" onclick="goToSpotTrading()">
+                        <i class="fas fa-chart-line"></i>
+                        <span>Открыть сделку</span>
+                    </button>
+                </div>
+            </section>
+
+            <!-- History Tabs -->
+            <section class="history-section">
+                <div class="tabs-container">
+                    <div class="tabs">
+                        <button class="tab active" data-tab="trades" onclick="switchHistoryTab('trades')">История сделок</button>
+                        <button class="tab" data-tab="orders" onclick="switchHistoryTab('orders')">История ордеров</button>
+                        <button class="tab" data-tab="notifications" onclick="switchHistoryTab('notifications')">Уведомления</button>
+                    </div>
+                </div>
+                
+                <div class="tab-content active" id="tradesTab">
+                    <div class="history-table-container">
+                        <table class="history-table">
+                            <thead>
+                                <tr>
+                                    <th>Пара</th>
+                                    <th>Тип</th>
+                                    <th>Цена</th>
+                                    <th>Количество</th>
+                                    <th>Время</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tradesHistoryBody">
+                                <!-- Trades will be populated here -->
+                                <tr>
+                                    <td colspan="5" class="no-data">Нет истории сделок</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <div class="tab-content" id="ordersTab">
+                    <div class="history-table-container">
+                        <table class="history-table">
+                            <thead>
+                                <tr>
+                                    <th>Пара</th>
+                                    <th>Тип</th>
+                                    <th>Цена</th>
+                                    <th>Количество</th>
+                                    <th>Статус</th>
+                                    <th>Время</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ordersHistoryBody">
+                                <!-- Order history will be populated here -->
+                                <tr>
+                                    <td colspan="6" class="no-data">Нет истории ордеров</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <div class="tab-content" id="notificationsTab">
+                    <div class="notifications-list" id="notificationsList">
+                        <!-- Notifications will be populated here -->
+                        <div class="no-notifications">
+                            <i class="fas fa-bell-slash"></i>
+                            <p>Нет уведомлений</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Bottom Navigation -->
+        <nav class="bottom-nav">
+            <button class="nav-btn" onclick="window.location.href='home.html'">
+                <i class="fas fa-home"></i>
+                <span>Главная</span>
+            </button>
+            <button class="nav-btn" onclick="window.location.href='coins.html'">
+                <i class="fas fa-coins"></i>
+                <span>Монеты</span>
+            </button>
+            <button class="nav-btn" onclick="window.location.href='coininfo.html'">
+                <i class="fas fa-chart-line"></i>
+                <span>Торговля</span>
+            </button>
+            <button class="nav-btn" onclick="window.location.href='setting.html'">
+                <i class="fas fa-cog"></i>
+                <span>Настройки</span>
+            </button>
+        </nav>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="notification-manager.js"></script>
+    <script src="portfolio.js"></script>
+</body>
+</html>
